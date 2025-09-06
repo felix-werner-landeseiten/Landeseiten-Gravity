@@ -1,0 +1,355 @@
+/*
+ * == CS Landeseiten Form - Styles ==
+ *
+ * Description:   Core stylesheet for the CS Landeseiten Form Gravity Forms wrapper.
+ * Author:        Landeseiten.de
+ * Version:       1.0.1 (Corrected)
+ *
+ */
+
+/* ================================= */
+/* --- Variable Definitions --- */
+/* ================================= */
+.gform_wrapper.cs-landeseiten-form {
+  /* --- Primary Theming (Colors & Core Sizing) --- */
+  --landeseiten-form-container-width: 800px;
+  --landeseiten-form-mobile-width: 90vw;
+  --landeseiten-form-accent-color: #0073aa;
+  --landeseiten-form-accent-contrast: #ffffff;
+  --landeseiten-form-text-color: #333333;
+  --landeseiten-form-bg-color: #ffffff;
+  --landeseiten-form-border-color: #cccccc;
+  --landeseiten-form-border-color-light: #e9e9e9;
+  --landeseiten-form-disabled-bg: #cccccc;
+  --landeseiten-form-disabled-color: #666666;
+
+  /* --- Layout & Spacing --- */
+  --landeseiten-form-vertical-margin: 40px;
+  --landeseiten-form-field-vertical-padding: 30px;
+  --landeseiten-form-footer-padding-top: 30px;
+  --landeseiten-form-footer-margin-top: 20px;
+  --landeseiten-form-footer-gap: 15px;
+  --landeseiten-form-reveal-padding: 60vh;
+
+  /* --- Typography --- */
+  --landeseiten-form-label-font-size: 24px;
+  --landeseiten-form-label-font-weight: 500;
+  --landeseiten-form-label-margin-bottom: 10px;
+  --landeseiten-form-input-font-size: 18px;
+  --landeseiten-form-button-font-size: 16px;
+  --landeseiten-form-button-font-weight: 600;
+
+  /* --- Inputs (Text, Textarea) --- */
+  --landeseiten-form-input-height: 50px;
+  --landeseiten-form-input-border-width: 1px;
+  --landeseiten-form-input-border-radius: 6px;
+  --landeseiten-form-textarea-min-height: 120px;
+  --landeseiten-form-textarea-padding: 15px;
+
+  /* --- Inputs (Radio & Checkbox Choices) --- */
+  --landeseiten-form-choice-padding: 10px 20px;
+  --landeseiten-form-choice-margin-bottom: 10px;
+  --landeseiten-form-choice-border-radius: 50px;
+  --landeseiten-form-choice-font-weight: 500;
+
+  /* --- Buttons --- */
+  --landeseiten-form-button-padding: 12px 28px;
+  --landeseiten-form-button-border-radius: 6px;
+  --landeseiten-form-previous-button-hover-bg: #f5f5f5;
+
+  /* --- Animation & Transitions --- */
+  --landeseiten-form-transition-duration: 0.2s;
+  --landeseiten-form-animation-duration: 0.5s;
+  --landeseiten-form-hover-brightness: 1.1;
+  --landeseiten-form-completed-step-opacity: 0.5;
+}
+
+/* ================================= */
+/* CS Landeseiten Form - Base Styles */
+/* ================================= */
+
+.gform_wrapper.cs-landeseiten-form {
+  position: relative;
+  overflow-x: hidden !important;
+  width: min(
+    var(--landeseiten-form-mobile-width),
+    var(--landeseiten-form-container-width)
+  );
+  margin: var(--landeseiten-form-vertical-margin) auto;
+  font-family: var(--landeseiten-form-font-family, sans-serif); 
+}
+
+.gform_wrapper.cs-landeseiten-form[data-mode="reveal"] {
+  padding-bottom: var(--landeseiten-form-reveal-padding) !important;
+}
+
+.gform_wrapper.cs-landeseiten-form .gform_title,
+.gform_wrapper.cs-landeseiten-form .gform_validation_summary {
+  display: none !important;
+}
+
+/* ==================================== */
+/* CS Landeseiten Form - Field States   */
+/* ==================================== */
+
+.gform_wrapper.cs-landeseiten-form .gfield:not(.active) {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 0;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden;
+  border: none;
+  transition: none;
+}
+
+.gform_wrapper.cs-landeseiten-form .gfield.active {
+  opacity: 1;
+  visibility: visible;
+  position: relative;
+  height: auto;
+  width: 100%;
+  padding: var(--landeseiten-form-field-vertical-padding) 0;
+}
+
+.gform_wrapper.cs-landeseiten-form[data-mode="reveal"] .gfield.step-completed {
+  padding: var(--landeseiten-form-field-vertical-padding) 0;
+}
+
+/* For Elementor Editor view */
+body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
+  opacity: 1 !important;
+  visibility: visible !important;
+  position: relative !important;
+  height: auto !important;
+  padding: 20px 0 !important;
+  border-top: 1px dashed var(--landeseiten-form-border-color-light);
+}
+
+/* =============================== */
+/* CS Landeseiten Form - Input Styles */
+/* =============================== */
+
+.gform_wrapper.cs-landeseiten-form .top_label .gfield_label {
+  color: var(--landeseiten-form-text-color);
+  font-size: var(--landeseiten-form-label-font-size) !important;
+  font-weight: var(--landeseiten-form-label-font-weight);
+  margin-bottom: var(--landeseiten-form-label-margin-bottom);
+  text-align: left;
+}
+
+.gform_wrapper.cs-landeseiten-form .ginput_container {
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.gform_wrapper.cs-landeseiten-form .ginput_container input:not([type="radio"]):not([type="checkbox"]),
+.gform_wrapper.cs-landeseiten-form .ginput_container textarea {
+  background-color: var(--landeseiten-form-bg-color);
+  border: var(--landeseiten-form-input-border-width) solid
+    var(--landeseiten-form-border-color) !important;
+  border-radius: var(--landeseiten-form-input-border-radius) !important;
+  color: var(--landeseiten-form-text-color) !important;
+  font-size: var(--landeseiten-form-input-font-size) !important;
+  height: var(--landeseiten-form-input-height) !important;
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.gform_wrapper.cs-landeseiten-form .ginput_container textarea {
+  height: auto !important;
+  min-height: var(--landeseiten-form-textarea-min-height);
+  padding: var(--landeseiten-form-textarea-padding);
+}
+
+.gform_wrapper.cs-landeseiten-form input[type="radio"],
+.gform_wrapper.cs-landeseiten-form input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.gform_wrapper.cs-landeseiten-form .gfield_checkbox,
+.gform_wrapper.cs-landeseiten-form .gfield_radio {
+  width: 100%;
+}
+
+.gform_wrapper.cs-landeseiten-form .gfield_radio .gchoice label,
+.gform_wrapper.cs-landeseiten-form .gfield_checkbox .gchoice label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--landeseiten-form-choice-padding);
+  margin-bottom: var(--landeseiten-form-choice-margin-bottom);
+  border: var(--landeseiten-form-input-border-width) solid
+    var(--landeseiten-form-border-color);
+  border-radius: var(--landeseiten-form-choice-border-radius);
+  width: 100%;
+  min-height: var(--landeseiten-form-input-height);
+  background: var(--landeseiten-form-bg-color);
+  color: var(--landeseiten-form-text-color) !important;
+  font-size: var(--landeseiten-form-input-font-size) !important;
+  font-weight: var(--landeseiten-form-choice-font-weight);
+  line-height: 1.3;
+  text-align: center;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all var(--landeseiten-form-transition-duration) linear;
+}
+
+.gform_wrapper.cs-landeseiten-form .gfield_radio .gchoice input:checked + label,
+.gform_wrapper.cs-landeseiten-form .gfield_checkbox .gchoice input:checked + label {
+  background: var(--landeseiten-form-accent-color);
+  border-color: var(--landeseiten-form-accent-color);
+  color: var(--landeseiten-form-accent-contrast) !important;
+}
+
+.gform_wrapper.cs-landeseiten-form input[type="number"]::-webkit-outer-spin-button,
+.gform_wrapper.cs-landeseiten-form input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.gform_wrapper.cs-landeseiten-form input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ================================= */
+/* CS Landeseiten Form - Footer & Buttons */
+/* ================================= */
+
+.gform_wrapper.cs-landeseiten-form .gform-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--landeseiten-form-footer-gap);
+  padding-top: var(--landeseiten-form-footer-padding-top);
+  margin-top: var(--landeseiten-form-footer-margin-top);
+  border-top: 1px solid var(--landeseiten-form-border-color-light);
+}
+
+.gform_wrapper.cs-landeseiten-form .gform_button {
+  min-width: max-content;
+  background: var(--landeseiten-form-accent-color);
+  border: 1px solid var(--landeseiten-form-accent-color) !important;
+  border-radius: var(--landeseiten-form-button-border-radius) !important;
+  padding: var(--landeseiten-form-button-padding) !important;
+  color: var(--landeseiten-form-accent-contrast) !important;
+  font-size: var(--landeseiten-form-button-font-size);
+  font-weight: var(--landeseiten-form-button-font-weight);
+  cursor: pointer;
+  transition: all var(--landeseiten-form-transition-duration) ease;
+  margin-bottom: 16px !important;
+}
+
+.gform_wrapper.cs-landeseiten-form .gform_button:hover,
+.gform_wrapper.cs-landeseiten-form .gform_button:focus,
+.gform_wrapper.cs-landeseiten-form .gform_button:focus-visible {
+  background-color: var(--landeseiten-form-accent-color);
+  filter: brightness(var(--landeseiten-form-hover-brightness));
+}
+
+.gform_wrapper.cs-landeseiten-form .gform_button:disabled {
+  background: var(--landeseiten-form-disabled-bg) !important;
+  border-color: var(--landeseiten-form-disabled-bg) !important;
+  color: var(--landeseiten-form-disabled-color) !important;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.gform_wrapper.cs-landeseiten-form .button-previous {
+  background: transparent !important;
+  color: var(--landeseiten-form-accent-color) !important;
+  border-color: var(--landeseiten-form-border-color) !important;
+}
+
+.gform_wrapper.cs-landeseiten-form .button-previous:hover,
+.gform_wrapper.cs-landeseiten-form .button-previous:focus,
+.gform_wrapper.cs-landeseiten-form .button-previous:focus-visible {
+  background: var(--landeseiten-form-previous-button-hover-bg) !important;
+  border-color: var(--landeseiten-form-border-color) !important;
+  filter: none;
+}
+
+
+/* =================================== */
+/* CS Landeseiten Form - Paged Animations */
+/* =================================== */
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(50%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes slideOutToLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-50%);
+    opacity: 0;
+  }
+}
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-50%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes slideOutToRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(50%);
+    opacity: 0;
+  }
+}
+
+.gform_wrapper.cs-landeseiten-form[data-mode="paged"] .gfield.active,
+.gform_wrapper.cs-landeseiten-form[data-mode="paged"] .gfield.animating-out {
+  animation-duration: var(--landeseiten-form-animation-duration);
+  animation-fill-mode: forwards;
+}
+
+.gform_wrapper.cs-landeseiten-form[data-mode="paged"]:not(.is-reversing) .gfield.active {
+  animation-name: slideInFromRight;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+.gform_wrapper.cs-landeseiten-form[data-mode="paged"]:not(.is-reversing) .gfield.animating-out {
+  animation-name: slideOutToLeft;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+}
+.gform_wrapper.cs-landeseiten-form[data-mode="paged"].is-reversing .gfield.active {
+  animation-name: slideInFromLeft;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+.gform_wrapper.cs-landeseiten-form[data-mode="paged"].is-reversing .gfield.animating-out {
+  animation-name: slideOutToRight;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+}
+
+.gform_wrapper.cs-landeseiten-form[data-mode="reveal"] .gfield.step-completed {
+  opacity: var(--landeseiten-form-completed-step-opacity);
+  transition: opacity calc(var(--landeseiten-form-animation-duration) * 0.8) ease-out;
+}
