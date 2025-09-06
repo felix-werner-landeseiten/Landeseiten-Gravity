@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name:       Landeseiten Form for Gravity Forms
- * Description:       A wrapper for Gravity Forms to create a one-question-at-a-time, animated user experience.
- * Version:           1.0.0
+ * Description:       A wrapper for Gravity Forms to create multi step, animated user experience.
+ * Version:           1.0.1
  * Author:            Landeseiten.de
  * Author URI:        https://landeseiten.de
  * License:           GPLv2 or later
