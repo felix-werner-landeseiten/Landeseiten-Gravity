@@ -43,6 +43,10 @@ Yes. You can create as many "Landeseiten Form" configurations as you need. Each 
 
 == Changelog ==
 
+= 1.1.1 =
+* FIX: Corrected CSS specificity to ensure custom accent color is applied to the final submit button.
+* FIX: Added a custom :focus style for text inputs to override default Gravity Forms theme styles.
+
 = 1.1.0 =
 * NEW: Added validation for Website/URL fields.
 * NEW: Added settings to customize Font Family, Font Sizes, and Text Colors.
