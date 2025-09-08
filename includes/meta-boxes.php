@@ -48,6 +48,7 @@ function lf_render_settings_meta_box( $post ) {
     $saved_error_req = get_post_meta( $post->ID, '_lf_error_required', true );
     $saved_error_email = get_post_meta( $post->ID, '_lf_error_email', true );
     $saved_error_phone = get_post_meta( $post->ID, '_lf_error_phone', true );
+    $saved_error_url = get_post_meta( $post->ID, '_lf_error_url', true ); // ** THIS LINE WAS MISSING **
 
     // --- Gravity Form Selector ---
     echo '<h4>' . esc_html__( 'Target Gravity Form', 'landeseiten-form' ) . '</h4>';
@@ -132,8 +133,11 @@ function lf_render_settings_meta_box( $post ) {
     echo '<p><label for="lf_error_email">' . esc_html__( 'Invalid Email Error', 'landeseiten-form' ) . '</label><br>';
     echo '<input type="text" id="lf_error_email" name="lf_error_email" value="' . esc_attr( $saved_error_email ?: 'Bitte geben Sie eine gültige E-Mail-Adresse ein.' ) . '" style="width: 100%; max-width: 400px;" />';
     echo '</p>';
-     echo '<p><label for="lf_error_phone">' . esc_html__( 'Invalid Phone Error', 'landeseiten-form' ) . '</label><br>';
+    echo '<p><label for="lf_error_phone">' . esc_html__( 'Invalid Phone Error', 'landeseiten-form' ) . '</label><br>';
     echo '<input type="text" id="lf_error_phone" name="lf_error_phone" value="' . esc_attr( $saved_error_phone ?: 'Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.' ) . '" style="width: 100%; max-width: 400px;" />';
+    echo '</p>';
+    echo '<p><label for="lf_error_url">' . esc_html__( 'Invalid URL/Website Error', 'landeseiten-form' ) . '</label><br>';
+    echo '<input type="text" id="lf_error_url" name="lf_error_url" value="' . esc_attr( $saved_error_url ?: 'Bitte geben Sie eine gültige Web-Adresse ein.' ) . '" style="width: 100%; max-width: 400px;" />';
     echo '</p>';
 
     echo '<hr style="margin: 20px 0;">';
@@ -193,6 +197,7 @@ function lf_save_post_meta( $post_id ) {
         '_lf_error_required'    => 'sanitize_text_field',
         '_lf_error_email'       => 'sanitize_text_field',
         '_lf_error_phone'       => 'sanitize_text_field',
+        '_lf_error_url'         => 'sanitize_text_field', 
     ];
 
     foreach ($fields_to_save as $meta_key => $sanitize_callback) {

@@ -4,14 +4,6 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, and state management.
  * Author:          Landeseiten.de
- * Version:         1.0.0
- * Last Updated:    2025-07-26
- *
- * == Changelog ==
- *
- * v1.0.0 - 2025-07-26
- * - Initial release of the script.
- *
  */
 
 // -----------------------------------------------------------------------------
@@ -91,6 +83,26 @@ class PhoneValidator extends Validator {
   }
 }
 
+/**
+ * Validates that a field's value is a properly formatted URL.
+ */
+class UrlValidator extends Validator {
+  isValid(field, messages) {
+    const value = field.getValue();
+    if (typeof value !== "string" || value.trim() === "") {
+      return { valid: true, message: null }; // An empty value is valid if not required
+    }
+    // A simple regex to check for a valid URL format
+    const regex =
+      /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    const isValid = regex.test(value.toLowerCase());
+    return {
+      valid: isValid,
+      message: isValid ? null : messages.url,
+    };
+  }
+}
+
 // -----------------------------------------------------------------------------
 // FIELD CLASSES
 // -----------------------------------------------------------------------------
@@ -103,15 +115,6 @@ class Field {
     this.wrapper = wrapper;
     this.validators = [];
     this.isDirty = false; // New property
-  }
-
-  /**
-   * Adds a validator instance to the field.
-   * @param {Validator} validator The validator to add.
-   */
-  addValidator(validator) {
-    this.validators.push(validator);
-    return this;
   }
 
   /**
@@ -226,10 +229,10 @@ class InputField extends Field {
     this.input = input;
 
     // Add real-time input filtering for telephone fields
-    if (this.input.type === 'tel') {
-      this.input.addEventListener('input', function(event) {
+    if (this.input.type === "tel") {
+      this.input.addEventListener("input", function (event) {
         // This instantly removes any character that is NOT a digit.
-        const numericValue = this.value.replace(/\D/g, '');
+        const numericValue = this.value.replace(/\D/g, "");
         if (this.value !== numericValue) {
           this.value = numericValue;
         }
@@ -382,9 +385,11 @@ class GravityFieldsProvider extends FieldsProvider {
     if (textInput && textInput.type === "email") {
       field.addValidator(new EmailValidator());
     }
-    // Check for the telephone input type
     if (textInput && textInput.type === "tel") {
       field.addValidator(new PhoneValidator());
+    }
+    if (textInput && textInput.type === "url") {
+      field.addValidator(new UrlValidator());
     }
     return field;
   }
@@ -412,7 +417,9 @@ class GravityFormControlsProvider extends ControlsProvider {
     const container = this.form.querySelector(".gform_footer");
     const submitButton = container?.querySelector("input[type='submit']");
     if (!container || !submitButton) {
-      console.error("LandeseitenForm Error: Form footer or submit button not found.");
+      console.error(
+        "LandeseitenForm Error: Form footer or submit button not found."
+      );
       return { nextButton: null, previousButton: null, submitButton: null };
     }
     const nextButton = document.createElement("button");
@@ -448,19 +455,32 @@ class LandeseitenForm {
       autoFocus: true,
       enterToAdvance: true,
       autoProgressRadio: true,
-      hideErrorUntilDirty: true, // New option added
+      hideErrorUntilDirty: true,
       scrollTopMargin: 40,
       buttonText: { next: "Weiter →", previous: "← Zurück" },
       errorMessages: {
-   errorMessages: {
         required: "Dieses Feld ist erforderlich.",
         email: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
         phone: "Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.",
-      },
+        url: "Bitte geben Sie eine gültige Web-Adresse ein.",
       },
     };
     this.formElement = form;
-    this.config = { ...defaultConfig, ...options };
+
+    // Perform a deep merge for nested objects like buttonText and errorMessages
+    this.config = {
+      ...defaultConfig,
+      ...options,
+      buttonText: {
+        ...defaultConfig.buttonText,
+        ...(options.buttonText || {}),
+      },
+      errorMessages: {
+        ...defaultConfig.errorMessages,
+        ...(options.errorMessages || {}),
+      },
+    };
+
     this.currentFieldIndex = 0;
     this.isAnimating = false;
     this.fields = fieldsProvider.provide(this.config);
@@ -667,14 +687,12 @@ class LandeseitenForm {
         oldField.show(false);
       }
       newField.show(true);
-		 scrollToShowField();
-         if (this.config.autoFocus) {
+      scrollToShowField();
+      if (this.config.autoFocus) {
         setTimeout(() => {
           newField.focus();
         }, 300);
       }
-
-     
 
       this.currentFieldIndex = newIndex;
       this.#onFieldChange();

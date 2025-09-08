@@ -56,6 +56,7 @@ function lf_apply_form_settings( $form ) {
         $error_req     = get_post_meta( $config_post_id, '_lf_error_required', true );
         $error_email   = get_post_meta( $config_post_id, '_lf_error_email', true );
         $error_phone   = get_post_meta( $config_post_id, '_lf_error_phone', true );
+        $error_url     = get_post_meta( $config_post_id, '_lf_error_url', true ); 
 
         $settings_for_js = [
             'mode' => $mode,
@@ -67,6 +68,7 @@ function lf_apply_form_settings( $form ) {
                 'required' => $error_req,
                 'email'    => $error_email,
                 'phone'    => $error_phone,
+                'url'      => $error_url, // ** THIS LINE WAS MISSING **
             ],
         ];
 
