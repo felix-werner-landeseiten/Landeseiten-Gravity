@@ -157,22 +157,20 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
 .gform_wrapper.cs-landeseiten-form .ginput_container textarea {
   background-color: var(--landeseiten-form-bg-color);
   border: var(--landeseiten-form-input-border-width) solid
-    var(--landeseiten-form-border-color) !important;
-  border-radius: var(--landeseiten-form-input-border-radius) !important;
-  color: var(--landeseiten-form-text-color) !important;
-  font-size: var(--landeseiten-form-input-font-size) !important;
-  height: var(--landeseiten-form-input-height) !important;
+    var(--landeseiten-form-border-color);
+  border-radius: var(--landeseiten-form-input-border-radius);
+  color: var(--landeseiten-form-text-color);
+  font-size: var(--landeseiten-form-input-font-size);
+  height: var(--landeseiten-form-input-height);
   width: 100%;
   text-align: center;
   box-sizing: border-box;
   transition: all var(--landeseiten-form-transition-duration) ease-in-out;
 }
-
 /*  Rule to fix the input focus style */
 .gform_wrapper.cs-landeseiten-form .ginput_container input:focus,
 .gform_wrapper.cs-landeseiten-form .ginput_container textarea:focus {
-  border-color: var(--landeseiten-form-accent-color) !important;
-  box-shadow: 0 0 0 1px var(--landeseiten-form-accent-color) !important;
+  box-shadow: none !important;
   outline: none !important;
 }
 
@@ -194,14 +192,18 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
 .gform_wrapper.cs-landeseiten-form .gfield_radio {
   width: 100%;
 }
-
+.gform_wrapper.cs-landeseiten-form .gfield_radio .gchoice,
+.gform_wrapper.cs-landeseiten-form .gfield_checkbox .gchoice {
+  display: flex !important;
+}
 .gform_wrapper.cs-landeseiten-form .gfield_radio .gchoice label,
 .gform_wrapper.cs-landeseiten-form .gfield_checkbox .gchoice label {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--landeseiten-form-choice-padding);
-  margin-bottom: var(--landeseiten-form-choice-margin-bottom);
+  margin-bottom: 0 !important;
+  margin-left: 0 !important;
   border: var(--landeseiten-form-input-border-width) solid
     var(--landeseiten-form-border-color);
   border-radius: var(--landeseiten-form-choice-border-radius);
@@ -239,6 +241,24 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
 
 .gform_wrapper.cs-landeseiten-form input[type="number"] {
   -moz-appearance: textfield;
+}
+
+/* ======================================== */
+/* CS Landeseiten Form - Validation Message */
+/* ======================================== */
+
+.gform_wrapper.cs-landeseiten-form .gfield_error .validation_message {
+  color: #b80000; /* A strong red color for errors */
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 15px;
+  background-color: #fbefef;
+  border: 1px solid #e5c3c3;
+  border-radius: var(--landeseiten-form-input-border-radius);
+  box-sizing: border-box;
 }
 
 /* ================================= */

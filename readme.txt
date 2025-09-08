@@ -43,6 +43,13 @@ Yes. You can create as many "Landeseiten Form" configurations as you need. Each 
 
 == Changelog ==
 
+= 1.2.0 =
+* NEW: Added "Input Field Styling" section to the settings.
+* NEW: Added options to customize background, text, and border colors for input fields in their normal state.
+* NEW: Added options to customize background, text, and border/glow colors for input fields in their focus state.
+* NEW: Added professional styling for validation error messages.
+* FIX: Corrected the input field focus style to be a full `inset` box-shadow, preventing it from being clipped.
+
 = 1.1.1 =
 * FIX: Corrected CSS specificity to ensure custom accent color is applied to the final submit button.
 * FIX: Added a custom :focus style for text inputs to override default Gravity Forms theme styles.
