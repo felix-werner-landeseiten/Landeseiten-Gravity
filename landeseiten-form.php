@@ -31,9 +31,9 @@ require_once LF_PLUGIN_DIR . 'vendor/plugin-update-checker/plugin-update-checker
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/YourUsername/YourRepositoryName/', // IMPORTANT: Your GitHub repository URL.
-    __FILE__, // The path to this main plugin file.
-    'landeseiten-form' // The plugin's slug.
+    'https://github.com/gamatech89/landeseiten-form/', 
+    __FILE__, 
+    'landeseiten-form' 
 );
 
 // Optional: Set the branch that contains the stable release.
