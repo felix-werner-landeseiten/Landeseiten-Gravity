@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Landeseiten Form for Gravity Forms
  * Description:       A wrapper for Gravity Forms to create multi step animated user experience.
- * Version:           1.0.3
+ * Version:           1.0.0
  * Author:            Landeseiten.de
  * Author URI:        https://landeseiten.de
  * License:           GPLv2 or later
@@ -31,7 +31,7 @@ require_once LF_PLUGIN_DIR . 'vendor/plugin-update-checker/plugin-update-checker
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $myUpdateChecker = PucFactory::buildUpdateChecker(
-    'https://github.com/gamatech89/landeseiten-form/', 
+    'https://github.com/felix-werner-landeseiten/Landeseiten-Gravity', 
     __FILE__, 
     'landeseiten-form' 
 );
