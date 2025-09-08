@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Landeseiten Form for Gravity Forms
  * Description:       A wrapper for Gravity Forms to create multi step animated user experience.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Author:            Landeseiten.de
  * Author URI:        https://landeseiten.de
  * License:           GPLv2 or later

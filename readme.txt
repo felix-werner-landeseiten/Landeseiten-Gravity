@@ -43,5 +43,11 @@ Yes. You can create as many "Landeseiten Form" configurations as you need. Each 
 
 == Changelog ==
 
+= 1.1.0 =
+* NEW: Added validation for Website/URL fields.
+* NEW: Added settings to customize Font Family, Font Sizes, and Text Colors.
+* NEW: Added settings to customize Next/Previous button text.
+* NEW: Added settings to customize all validation error messages (Required, Email, Phone, URL).
+
 = 1.0.0 =
 * Initial release of the plugin.
