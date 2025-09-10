@@ -67,7 +67,7 @@
 /* CS Landeseiten Form - Base Styles */
 /* ================================= */
 
-.gform_wrapper.cs-landeseiten-form.landeseiten-form-active {
+.gform_wrapper.cs-landeseiten-form {
   display: block !important;
 }
 

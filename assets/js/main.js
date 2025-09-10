@@ -267,6 +267,42 @@ class InputField extends Field {
 }
 
 /**
+ * Represents a file upload field.
+ */
+class FileUploadField extends Field {
+  constructor(container, input) {
+    super(container);
+    this.input = input;
+  }
+
+  onChange(callback, onFileSelected) {
+    const handleChange = (event) => {
+      if (!this.isDirty) {
+        this.isDirty = true;
+      }
+      callback(event);
+      // Automatically advance when a file is selected
+      if (this.getValue().length > 0) {
+        onFileSelected();
+      }
+    };
+    this.input.addEventListener("change", handleChange);
+  }
+
+  getValue() {
+    // The value of a file input is a FileList object
+    return this.input.files;
+  }
+
+  focus() {
+    // This method is intentionally left empty.
+    // Automatically triggering a file input's click event when the field
+    // becomes active can be a disruptive user experience. This change
+    // requires the user to manually click the button to select a file.
+  }
+}
+
+/**
  * Base class for choice-based fields like radio buttons and checkboxes.
  */
 class ChoiceField extends Field {
@@ -351,14 +387,17 @@ class GravityFieldsProvider extends FieldsProvider {
   #resolveSingle(wrapper, config) {
     if (
       wrapper.style.display === "none" ||
-      wrapper.classList.contains("gform_validation_container")
+      wrapper.classList.contains("gform_validation_container") ||
+      wrapper.classList.contains("gfield_visibility_hidden") ||
+      wrapper.classList.contains("lf-skip")
     ) {
-      return null; // Ignore fields hidden by conditional logic and honeypot.
+      return null;
     }
 
     const isRadio = wrapper.querySelector(".gfield_radio") !== null;
     const isCheckbox = wrapper.querySelector(".gfield_checkbox") !== null;
     const textarea = wrapper.querySelector("textarea");
+    const fileInput = wrapper.querySelector('input[type="file"]');
     const textInput = wrapper.querySelector(
       'input[type="text"], input[type="email"], input[type="number"], input[type="tel"], input[type="url"]'
     );
@@ -372,6 +411,8 @@ class GravityFieldsProvider extends FieldsProvider {
       field = new CheckboxField(wrapper, choices);
     } else if (textarea) {
       field = new InputField(wrapper, textarea);
+    } else if (fileInput) {
+      field = new FileUploadField(wrapper, fileInput);
     } else if (textInput) {
       field = new InputField(wrapper, textInput);
     }
@@ -496,7 +537,6 @@ class LandeseitenForm {
       this.#onPreviousButtonClick.bind(this);
     this.#onEnterPressedCallback = this.#onEnterPressed.bind(this);
   }
-
   /**
    * Initializes the form, sets up fields, and attaches event listeners.
    */
@@ -535,7 +575,15 @@ class LandeseitenForm {
         ? this.#onEnterPressedCallback
         : () => {};
 
-      if (field instanceof RadioField && this.config.autoProgressRadio) {
+      // Special handling for FileUploadField
+      if (field instanceof FileUploadField) {
+        const combinedHandler = (event) => {
+          this.#onFieldChangeCallback(event);
+          // A short delay to allow the validation to run before auto-advancing
+          setTimeout(() => this.#onNextButtonClick(), 100);
+        };
+        field.onChange(this.#onFieldChangeCallback, combinedHandler);
+      } else if (field instanceof RadioField && this.config.autoProgressRadio) {
         const combinedHandler = (event) => {
           this.#onFieldChangeCallback(event);
           this.#updateButtonVisibility(); // Crucial for conditional logic

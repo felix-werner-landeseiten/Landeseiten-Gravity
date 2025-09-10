@@ -1,13 +1,13 @@
 === Landeseiten Form for Gravity Forms ===
-Contributors: gamatech89
-Tags: gravity forms, form, multi-step, one page, landing page, conversion
+Contributors: gamatech89, felix-werner-landeseiten
+Tags: gravity forms, form, multi-step, one page, landing page, conversion, file upload
 Requires at least: 5.8
 Tested up to: 6.5
-Stable tag: 1.0.1
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.txt
 
-A powerful wrapper for Gravity Forms that transforms any form into an engaging, one-question-at-a-time, animated user experience.
+A powerful wrapper for Gravity Forms that transforms any form into an engaging, one-question-at-a-time, animated user experience with deep customization.
 
 == Description ==
 
@@ -17,7 +17,9 @@ With a dedicated settings panel, you can create unlimited configurations and app
 
 **Features:**
 * Converts any Gravity Form into a one-question-at-a-time layout.
-* Two animation modes: "Reveal" (next question appears below) and "Paged" (next question replaces the current one).
+* Now supports File Upload fields.
+* Allows specific fields (like hidden or read-only fields) to be excluded from the multi-step experience.
+* Two animation modes: "Reveal" and "Paged".
 * Create and manage unlimited form configurations.
 * Customize colors, fonts, font sizes, button text, and error messages on a per-form basis.
 * Automatic updates directly from your GitHub repository.
@@ -33,9 +35,9 @@ With a dedicated settings panel, you can create unlimited configurations and app
 
 == Frequently Asked Questions ==
 
-= How do I apply the layout to a form? =
+= How do I exclude a field from the multi-step experience? =
 
-You first need to create a configuration. Go to the "Landeseiten Forms" menu in your admin dashboard, click "Add New", choose the Gravity Form you want to target from the dropdown, customize the settings, and publish it. The layout will then be applied automatically wherever that Gravity Form appears.
+The plugin automatically ignores fields that are set to "Hidden" in Gravity Forms. For any other field you want to make visible but not interactive (like a pre-populated, read-only field), go to the field's settings, click the "Appearance" tab, and add `lf-skip` to the "Custom CSS Class" box.
 
 = Can I use this for multiple forms on the same site? =
 
@@ -43,22 +45,24 @@ Yes. You can create as many "Landeseiten Form" configurations as you need. Each 
 
 == Changelog ==
 
+= 1.3.0 =
+* NEW: Added full support for File Upload fields.
+* NEW: Added the ability to exclude fields from the multi-step flow by adding the `lf-skip` CSS class.
+* IMPROVEMENT: The plugin now automatically ignores Gravity Forms' standard "Hidden" fields.
+* IMPROVEMENT: File upload fields now auto-advance upon file selection but do not automatically open the file dialog on focus.
+
 = 1.2.0 =
 * NEW: Added "Input Field Styling" section to the settings.
-* NEW: Added options to customize background, text, and border colors for input fields in their normal state.
-* NEW: Added options to customize background, text, and border/glow colors for input fields in their focus state.
+* NEW: Added options to customize background, text, and border colors for input fields in their normal and focus states.
 * NEW: Added professional styling for validation error messages.
-* FIX: Corrected the input field focus style to be a full `inset` box-shadow, preventing it from being clipped.
+* FIX: Corrected the input field focus style to be a full `inset` box-shadow.
 
 = 1.1.1 =
-* FIX: Corrected CSS specificity to ensure custom accent color is applied to the final submit button.
-* FIX: Added a custom :focus style for text inputs to override default Gravity Forms theme styles.
+* FIX: Corrected CSS specificity to ensure custom accent color is applied to the final submit button and input focus styles.
 
 = 1.1.0 =
-* NEW: Added validation for Website/URL fields.
-* NEW: Added settings to customize Font Family, Font Sizes, and Text Colors.
-* NEW: Added settings to customize Next/Previous button text.
-* NEW: Added settings to customize all validation error messages (Required, Email, Phone, URL).
+* NEW: Added validation for Website/URL fields and corresponding settings.
+* NEW: Added settings to customize Font Family, Font Sizes, Text Colors, and Button/Error text.
 
 = 1.0.0 =
 * Initial release of the plugin.
