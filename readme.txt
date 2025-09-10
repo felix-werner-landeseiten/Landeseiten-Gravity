@@ -45,6 +45,9 @@ Yes. You can create as many "Landeseiten Form" configurations as you need. Each 
 
 == Changelog ==
 
+= 1.3.1 =
+* FIX: Resolved an issue where selecting a date from a Gravity Forms Date Picker field would not enable the 'Next' button or remove the validation error.
+
 = 1.3.0 =
 * NEW: Added full support for File Upload fields.
 * NEW: Added the ability to exclude fields from the multi-step flow by adding the `lf-skip` CSS class.

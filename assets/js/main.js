@@ -219,7 +219,6 @@ class Field {
     this.wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 }
-
 /**
  * Represents a standard text, email, textarea, etc. input field.
  */
@@ -241,20 +240,48 @@ class InputField extends Field {
   }
 
   onChange(callback, onEnterPressed) {
-    const handleInput = (event) => {
+    const handleValidation = () => {
       if (!this.isDirty) {
         this.isDirty = true;
       }
-      callback(event);
+      callback();
     };
 
-    this.input.addEventListener("input", handleInput);
+    // Standard listener for user typing
+    this.input.addEventListener("input", handleValidation);
+
+    // Standard listener for Enter key
     this.input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
         onEnterPressed();
       }
     });
+
+    // For date pickers, we listen for clicks on the calendar UI itself.
+    if (this.input.classList.contains("datepicker")) {
+      const handleDatePickerClick = (event) => {
+        // Check if the click happened inside the pop-up calendar
+        if (event.target.closest("#ui-datepicker-div")) {
+          // Use a tiny delay to ensure the value is set before we validate
+          setTimeout(() => {
+            handleValidation();
+          }, 100);
+          // Clean up the listener so it doesn't fire again unnecessarily
+          document.body.removeEventListener(
+            "click",
+            handleDatePickerClick,
+            true
+          );
+        }
+      };
+
+      // When the user clicks INTO the date field...
+      this.input.addEventListener("focus", () => {
+        // ...start listening for a click anywhere on the page.
+        document.body.addEventListener("click", handleDatePickerClick, true);
+      });
+    }
   }
 
   getValue() {

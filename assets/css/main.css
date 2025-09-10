@@ -279,7 +279,7 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
 /* The final submit button */
 .gform_wrapper.cs-landeseiten-form .gform_button,
 .gform_wrapper.cs-landeseiten-form input[type="submit"].gform_button {
-  min-width: max-content;
+  min-width: max-content !important;
   background: var(--landeseiten-form-accent-color) !important;
   border: 1px solid var(--landeseiten-form-accent-color) !important;
   border-radius: var(--landeseiten-form-button-border-radius) !important;
