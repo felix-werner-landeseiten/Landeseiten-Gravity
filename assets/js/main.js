@@ -2,8 +2,9 @@
  * == CS Landeseiten Form - Scripts ==
  *
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
- * Handles animations, validation, and state management.
- * Author:          Landeseiten.de
+ * Handles animations, validation, state management, and the progress bar.
+ * Author:        Landeseiten.de
+ * Version:       2.0.0
  */
 
 // -----------------------------------------------------------------------------
@@ -14,12 +15,6 @@
  * Base class for all field validators.
  */
 class Validator {
-  /**
-   * Checks if a field's value is valid. Must be implemented by a subclass.
-   * @param {Field} field The field instance to validate.
-   * @param {object} messages A key-value pair of error messages.
-   * @returns {{valid: boolean, message: string|null}} An object indicating validity and an error message.
-   */
   isValid(field, messages) {
     throw new Error("Validator.isValid() must be implemented by a subclass.");
   }
@@ -32,13 +27,17 @@ class RequiredValidator extends Validator {
   isValid(field, messages) {
     const value = field.getValue();
     let hasValue = false;
+
     if (Array.isArray(value)) {
       hasValue = value.length > 0;
     } else if (typeof value === "string") {
       hasValue = value.trim() !== "";
+    } else if (value instanceof FileList) {
+      hasValue = value.length > 0;
     } else {
       hasValue = value != null;
     }
+
     return {
       valid: hasValue,
       message: hasValue ? null : messages.required,
@@ -53,11 +52,14 @@ class EmailValidator extends Validator {
   isValid(field, messages) {
     const value = field.getValue();
     if (typeof value !== "string" || value.trim() === "") {
-      return { valid: true, message: null }; // Not required, so an empty value is valid.
+      return { valid: true, message: null };
     }
+
+    // Standard Email Regex
     const regex =
       /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}(\.[0-9]{1,3}){3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     const isValid = regex.test(value.toLowerCase());
+
     return {
       valid: isValid,
       message: isValid ? null : messages.email,
@@ -66,7 +68,8 @@ class EmailValidator extends Validator {
 }
 
 /**
- * Validates that a field's value contains only numeric digits.
+ * Validates phone numbers using a permissive approach.
+ * Allows spaces, +, -, () but ensures at least 7 digits are present.
  */
 class PhoneValidator extends Validator {
   isValid(field, messages) {
@@ -74,11 +77,20 @@ class PhoneValidator extends Validator {
     if (typeof value !== "string" || value.trim() === "") {
       return { valid: true, message: null };
     }
-    const regex = /^\d+$/;
-    const isValid = regex.test(value);
+
+    // 1. Strip all formatting to count actual numbers
+    const digitsOnly = value.replace(/[^0-9]/g, "");
+
+    // 2. Check length (International numbers are usually 7-15 digits)
+    const isLengthValid = digitsOnly.length >= 7 && digitsOnly.length <= 16;
+
+    // 3. Ensure no illegal characters (letters, etc) remain in the raw value
+    // Allowed: 0-9, space, +, -, (, )
+    const hasValidChars = /^[0-9+\-\s()]*$/.test(value);
+
     return {
-      valid: isValid,
-      message: isValid ? null : messages.phone,
+      valid: isLengthValid && hasValidChars,
+      message: isLengthValid && hasValidChars ? null : messages.phone,
     };
   }
 }
@@ -90,12 +102,13 @@ class UrlValidator extends Validator {
   isValid(field, messages) {
     const value = field.getValue();
     if (typeof value !== "string" || value.trim() === "") {
-      return { valid: true, message: null }; // An empty value is valid if not required
+      return { valid: true, message: null };
     }
-    // A simple regex to check for a valid URL format
+
     const regex =
       /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
     const isValid = regex.test(value.toLowerCase());
+
     return {
       valid: isValid,
       message: isValid ? null : messages.url,
@@ -114,53 +127,40 @@ class Field {
   constructor(wrapper) {
     this.wrapper = wrapper;
     this.validators = [];
-    this.isDirty = false; // New property
+    this.isDirty = false;
   }
 
-  /**
-   * Adds a validator instance to the field.
-   * @param {Validator} validator The validator to add.
-   */
   addValidator(validator) {
     this.validators.push(validator);
     return this;
   }
 
-  /**
-   * Validates the field against all its validators and displays an error if invalid.
-   * @param {object} config The LandeseitenForm configuration object.
-   * @returns {boolean} True if the field is valid, otherwise false.
-   */
   validate(config) {
     let errorMessage = null;
     for (const validator of this.validators) {
       const result = validator.isValid(this, config.errorMessages);
       if (!result.valid) {
         errorMessage = result.message;
-        break; // Stop on the first error.
+        break;
       }
     }
 
-    // Only display the error if the feature is off or the field has been interacted with.
+    // Only show error if the user has interacted with the field (isDirty)
+    // or if the config forces errors to show immediately.
     if (config.hideErrorUntilDirty && !this.isDirty) {
       this.displayError(null);
     } else {
       this.displayError(errorMessage);
     }
-
-    // The field's validity is returned regardless of whether the error is shown.
     return errorMessage === null;
   }
 
-  /**
-   * Displays or hides a validation error message for the field.
-   * @param {string|null} message The error message to display, or null to hide.
-   */
   displayError(message) {
     const errorClassName = "gfield_description validation_message";
     let errorEl = this.wrapper.querySelector(
       `.${errorClassName.replace(/ /g, ".")}`
     );
+
     this.wrapper.classList.remove("gfield_error");
     if (errorEl) errorEl.style.display = "none";
 
@@ -181,59 +181,41 @@ class Field {
     errorEl.style.display = "block";
   }
 
-  /**
-   * Attaches a callback function to the field's change event.
-   * @param {Function} callback The function to call on change.
-   */
   onChange(callback) {
     throw new Error("Field.onChange() must be implemented by a subclass.");
   }
 
-  /**
-   * Gets the current value of the field.
-   * @returns {*} The field's value.
-   */
   getValue() {
     throw new Error("Field.getValue() must be implemented by a subclass.");
   }
 
-  /**
-   * Shows or hides the field.
-   * @param {boolean} flag True to show, false to hide.
-   */
   show(flag) {
     this.wrapper.classList.toggle("active", flag);
   }
 
-  /**
-   * Sets focus on the field's input element.
-   */
   focus() {
-    // Implemented by subclasses.
+    // Implemented by subclasses
   }
 
-  /**
-   * Scrolls the field into the center of the viewport.
-   */
   scrollTo() {
     this.wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 }
+
 /**
- * Represents a standard text, email, textarea, etc. input field.
+ * Represents standard text inputs (text, email, tel, number, url).
  */
 class InputField extends Field {
   constructor(container, input) {
     super(container);
     this.input = input;
 
-    // Add real-time input filtering for telephone fields
+    // Smart Phone Input Handler: Restricts input to allowed characters
     if (this.input.type === "tel") {
-      this.input.addEventListener("input", function (event) {
-        // This instantly removes any character that is NOT a digit.
-        const numericValue = this.value.replace(/\D/g, "");
-        if (this.value !== numericValue) {
-          this.value = numericValue;
+      this.input.addEventListener("input", (event) => {
+        const validChars = this.input.value.replace(/[^0-9+\-\s()]/g, "");
+        if (this.input.value !== validChars) {
+          this.input.value = validChars;
         }
       });
     }
@@ -247,10 +229,7 @@ class InputField extends Field {
       callback();
     };
 
-    // Standard listener for user typing
     this.input.addEventListener("input", handleValidation);
-
-    // Standard listener for Enter key
     this.input.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -258,29 +237,50 @@ class InputField extends Field {
       }
     });
 
-    // For date pickers, we listen for clicks on the calendar UI itself.
-    if (this.input.classList.contains("datepicker")) {
-      const handleDatePickerClick = (event) => {
-        // Check if the click happened inside the pop-up calendar
-        if (event.target.closest("#ui-datepicker-div")) {
-          // Use a tiny delay to ensure the value is set before we validate
-          setTimeout(() => {
-            handleValidation();
-          }, 100);
-          // Clean up the listener so it doesn't fire again unnecessarily
-          document.body.removeEventListener(
-            "click",
-            handleDatePickerClick,
-            true
-          );
-        }
-      };
+    // --- Flatpickr Date Integration ---
+    if (
+      this.input.classList.contains("datepicker") ||
+      this.input.classList.contains("hasDatepicker")
+    ) {
+      const fieldId = this.input.id;
+      const parts = fieldId.split("_");
+      const formId = parts[1];
+      const configVarName = "lf_datepicker_config_" + formId;
+      const config =
+        window[configVarName] && window[configVarName][fieldId]
+          ? window[configVarName][fieldId]
+          : {};
+      const mode = config.mode || "single";
 
-      // When the user clicks INTO the date field...
-      this.input.addEventListener("focus", () => {
-        // ...start listening for a click anywhere on the page.
-        document.body.addEventListener("click", handleDatePickerClick, true);
-      });
+      if (typeof flatpickr !== "undefined") {
+        // Cleanup legacy Gravity Forms classes
+        this.input.classList.remove("datepicker", "gform-datepicker");
+        if (typeof jQuery !== "undefined") {
+          try {
+            jQuery(this.input).datepicker("destroy");
+            jQuery(this.input).removeClass("hasDatepicker");
+          } catch (e) {}
+        }
+
+        flatpickr(this.input, {
+          mode: mode,
+          minDate: config.minDate || null,
+          maxDate: config.maxDate || null,
+          dateFormat: "m/d/Y",
+          disableMobile: "true",
+          onChange: function (selectedDates, dateStr, instance) {
+            if (mode === "range") {
+              if (selectedDates.length === 2) {
+                handleValidation();
+              }
+            } else {
+              if (selectedDates.length === 1) {
+                handleValidation();
+              }
+            }
+          },
+        });
+      }
     }
   }
 
@@ -294,7 +294,7 @@ class InputField extends Field {
 }
 
 /**
- * Represents a file upload field.
+ * Represents file upload inputs.
  */
 class FileUploadField extends Field {
   constructor(container, input) {
@@ -308,7 +308,7 @@ class FileUploadField extends Field {
         this.isDirty = true;
       }
       callback(event);
-      // Automatically advance when a file is selected
+      // Auto-advance if file is selected
       if (this.getValue().length > 0) {
         onFileSelected();
       }
@@ -317,20 +317,71 @@ class FileUploadField extends Field {
   }
 
   getValue() {
-    // The value of a file input is a FileList object
     return this.input.files;
   }
 
+  focus() {}
+}
+
+/**
+ * Represents dropdown select menus.
+ */
+class SelectField extends Field {
+  constructor(container, select) {
+    super(container);
+    this.select = select;
+  }
+
+  onChange(callback) {
+    const handleChange = (event) => {
+      if (!this.isDirty) {
+        this.isDirty = true;
+      }
+      callback(event);
+    };
+    this.select.addEventListener("change", handleChange);
+  }
+
+  getValue() {
+    return this.select.value;
+  }
+
   focus() {
-    // This method is intentionally left empty.
-    // Automatically triggering a file input's click event when the field
-    // becomes active can be a disruptive user experience. This change
-    // requires the user to manually click the button to select a file.
+    this.select.focus({ preventScroll: true });
   }
 }
 
 /**
- * Base class for choice-based fields like radio buttons and checkboxes.
+ * Represents the Consent / Privacy Policy checkbox.
+ */
+class ConsentField extends Field {
+  constructor(container, input) {
+    super(container);
+    this.input = input;
+  }
+
+  onChange(callback) {
+    const handleChange = (event) => {
+      if (!this.isDirty) {
+        this.isDirty = true;
+      }
+      callback(event);
+    };
+    this.input.addEventListener("change", handleChange);
+  }
+
+  getValue() {
+    // Return value if checked, otherwise null to trigger validation error
+    return this.input.checked ? this.input.value : null;
+  }
+
+  focus() {
+    this.input.focus({ preventScroll: true });
+  }
+}
+
+/**
+ * Base class for multi-choice fields (Radio / Checkbox).
  */
 class ChoiceField extends Field {
   constructor(container, choices) {
@@ -345,7 +396,6 @@ class ChoiceField extends Field {
       }
       callback(event);
     };
-
     this.choices.forEach((choice) => {
       choice.addEventListener("input", handleInput);
     });
@@ -358,9 +408,6 @@ class ChoiceField extends Field {
   }
 }
 
-/**
- * Represents a checkbox field, allowing multiple selections.
- */
 class CheckboxField extends ChoiceField {
   getValue() {
     return this.choices
@@ -369,9 +416,6 @@ class CheckboxField extends ChoiceField {
   }
 }
 
-/**
- * Represents a radio button field, allowing a single selection.
- */
 class RadioField extends ChoiceField {
   getValue() {
     const selected = this.choices.find((choice) => choice.checked);
@@ -383,18 +427,12 @@ class RadioField extends ChoiceField {
 // PROVIDER CLASSES
 // -----------------------------------------------------------------------------
 
-/**
- * Base class for providing fields from a form source.
- */
 class FieldsProvider {
   provide(config) {
     return [];
   }
 }
 
-/**
- * Scans a Gravity Forms element and provides an array of Field objects.
- */
 class GravityFieldsProvider extends FieldsProvider {
   constructor(form) {
     super();
@@ -404,14 +442,11 @@ class GravityFieldsProvider extends FieldsProvider {
   provide(config) {
     return Array.from(this.form.querySelectorAll(".gfield"))
       .map((wrapper) => this.#resolveSingle(wrapper, config))
-      .filter(Boolean); // Filter out any null results
+      .filter(Boolean);
   }
 
-  /**
-   * Resolves a single Gravity Forms field wrapper into a specific Field instance.
-   * @private
-   */
   #resolveSingle(wrapper, config) {
+    // Skip hidden or utility fields
     if (
       wrapper.style.display === "none" ||
       wrapper.classList.contains("gform_validation_container") ||
@@ -423,30 +458,44 @@ class GravityFieldsProvider extends FieldsProvider {
 
     const isRadio = wrapper.querySelector(".gfield_radio") !== null;
     const isCheckbox = wrapper.querySelector(".gfield_checkbox") !== null;
+    const isConsent = wrapper.classList.contains("gfield--type-consent");
     const textarea = wrapper.querySelector("textarea");
     const fileInput = wrapper.querySelector('input[type="file"]');
+    const select = wrapper.querySelector("select");
     const textInput = wrapper.querySelector(
       'input[type="text"], input[type="email"], input[type="number"], input[type="tel"], input[type="url"]'
     );
 
     let field = null;
+
     if (isRadio) {
-      const choices = Array.from(wrapper.querySelectorAll(".gchoice input"));
-      field = new RadioField(wrapper, choices);
+      field = new RadioField(
+        wrapper,
+        Array.from(wrapper.querySelectorAll(".gchoice input"))
+      );
     } else if (isCheckbox) {
-      const choices = Array.from(wrapper.querySelectorAll(".gchoice input"));
-      field = new CheckboxField(wrapper, choices);
-    } else if (textarea) {
-      field = new InputField(wrapper, textarea);
+      field = new CheckboxField(
+        wrapper,
+        Array.from(wrapper.querySelectorAll(".gchoice input"))
+      );
+    } else if (isConsent) {
+      const input = wrapper.querySelector('input[type="checkbox"]');
+      if (input) {
+        field = new ConsentField(wrapper, input);
+      }
     } else if (fileInput) {
       field = new FileUploadField(wrapper, fileInput);
+    } else if (select) {
+      field = new SelectField(wrapper, select);
+    } else if (textarea) {
+      field = new InputField(wrapper, textarea);
     } else if (textInput) {
       field = new InputField(wrapper, textInput);
     }
 
     if (!field) return null;
 
-    // Add validators based on Gravity Forms classes
+    // Add Validators based on field type and Gravity Forms classes
     if (wrapper.classList.contains("gfield_contains_required")) {
       field.addValidator(new RequiredValidator());
     }
@@ -459,48 +508,43 @@ class GravityFieldsProvider extends FieldsProvider {
     if (textInput && textInput.type === "url") {
       field.addValidator(new UrlValidator());
     }
+
     return field;
   }
 }
 
-/**
- * Base class for providing form controls.
- */
 class ControlsProvider {
   provide() {
-    throw new Error("ControlsProvider.provide() must be implemented.");
+    throw new Error("Not implemented");
   }
 }
 
-/**
- * Injects and provides Next/Previous buttons for a Gravity Form.
- */
 class GravityFormControlsProvider extends ControlsProvider {
   constructor(form) {
     super();
     this.form = form;
   }
 
-  provide() {
+  provide(config) {
     const container = this.form.querySelector(".gform_footer");
     const submitButton = container?.querySelector("input[type='submit']");
+
     if (!container || !submitButton) {
-      console.error(
-        "LandeseitenForm Error: Form footer or submit button not found."
-      );
       return { nextButton: null, previousButton: null, submitButton: null };
     }
+
     const nextButton = document.createElement("button");
-    nextButton.type = "button";
     nextButton.className = "gform_button button button-next";
+    nextButton.type = "button";
     nextButton.disabled = true;
 
     const previousButton = document.createElement("button");
-    previousButton.type = "button";
     previousButton.className = "gform_button button button-previous";
+    previousButton.type = "button";
 
     container.insertBefore(previousButton, submitButton);
     container.insertBefore(nextButton, submitButton);
+
     return { nextButton, previousButton, submitButton };
   }
 }
@@ -508,9 +552,7 @@ class GravityFormControlsProvider extends ControlsProvider {
 // -----------------------------------------------------------------------------
 // CORE FORM CLASS
 // -----------------------------------------------------------------------------
-/**
- * Orchestrates the multi-step form logic, handling state, transitions, and validation.
- */
+
 class LandeseitenForm {
   #onFieldChangeCallback;
   #onNextButtonClickCallback;
@@ -521,21 +563,27 @@ class LandeseitenForm {
     const defaultConfig = {
       mode: "reveal",
       autoFocus: true,
+      progressBar: false,
       enterToAdvance: true,
       autoProgressRadio: true,
       hideErrorUntilDirty: true,
       scrollTopMargin: 40,
-      buttonText: { next: "Weiter →", previous: "← Zurück" },
+      buttonText: {
+        next: "Weiter →",
+        previous: "← Zurück",
+        submit: "Absenden",
+      },
       errorMessages: {
-        required: "Dieses Feld ist erforderlich.",
-        email: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
-        phone: "Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.",
-        url: "Bitte geben Sie eine gültige Web-Adresse ein.",
+        required: "Required",
+        email: "Invalid Email",
+        phone: "Invalid Phone",
+        url: "Invalid URL",
       },
     };
+
     this.formElement = form;
 
-    // Perform a deep merge for nested objects like buttonText and errorMessages
+    // Merge configuration
     this.config = {
       ...defaultConfig,
       ...options,
@@ -549,11 +597,10 @@ class LandeseitenForm {
       },
     };
 
-    this.currentFieldIndex = 0;
-    this.isAnimating = false;
     this.fields = fieldsProvider.provide(this.config);
     const { nextButton, previousButton, submitButton } =
       controlsProvider.provide();
+
     this.nextButton = nextButton;
     this.previousButton = previousButton;
     this.submitButton = submitButton;
@@ -563,15 +610,13 @@ class LandeseitenForm {
     this.#onPreviousButtonClickCallback =
       this.#onPreviousButtonClick.bind(this);
     this.#onEnterPressedCallback = this.#onEnterPressed.bind(this);
+
+    this.progressBarEl = null;
+    this.progressFillEl = null;
   }
-  /**
-   * Initializes the form, sets up fields, and attaches event listeners.
-   */
+
   init() {
     if (!this.fields.length || !this.nextButton) {
-      console.error(
-        "LandeseitenForm could not initialize. Missing fields or controls."
-      );
       if (this.submitButton) this.submitButton.style.display = "block";
       return;
     }
@@ -580,51 +625,68 @@ class LandeseitenForm {
     this.nextButton.textContent = this.config.buttonText.next;
     this.previousButton.textContent = this.config.buttonText.previous;
 
-    // Find the first field with an error, but only if it's visible.
+    // Apply custom submit button text if provided
+    if (this.config.buttonText.submit) {
+      this.submitButton.value = this.config.buttonText.submit;
+    }
+
+    // Initialize Progress Bar if enabled
+    if (this.config.progressBar) {
+      this.progressBarEl = document.createElement("div");
+      this.progressBarEl.className = "lf-progress-container";
+      this.progressFillEl = document.createElement("div");
+      this.progressFillEl.className = "lf-progress-bar";
+      this.progressBarEl.appendChild(this.progressFillEl);
+
+      // Insert at the very top of the form wrapper
+      this.formElement.insertBefore(
+        this.progressBarEl,
+        this.formElement.firstChild
+      );
+    }
+
+    // Calculate initial active field index
     let initialIndex = this.fields.findIndex(
       (field) =>
         field.wrapper.classList.contains("gfield_error") &&
         this.#isFieldVisible(field)
     );
-
-    // If no visible errored field is found, find the first visible field.
     if (initialIndex === -1) {
       initialIndex = this.fields.findIndex((field) =>
         this.#isFieldVisible(field)
       );
     }
-
-    // If no fields are visible, default to 0.
     this.currentFieldIndex = initialIndex === -1 ? 0 : initialIndex;
 
+    // Bind events to fields
     this.fields.forEach((field, index) => {
       const enterHandler = this.config.enterToAdvance
         ? this.#onEnterPressedCallback
         : () => {};
 
-      // Special handling for FileUploadField
       if (field instanceof FileUploadField) {
-        const combinedHandler = (event) => {
-          this.#onFieldChangeCallback(event);
-          // A short delay to allow the validation to run before auto-advancing
+        field.onChange(this.#onFieldChangeCallback, (e) => {
+          this.#onFieldChangeCallback(e);
           setTimeout(() => this.#onNextButtonClick(), 100);
-        };
-        field.onChange(this.#onFieldChangeCallback, combinedHandler);
+        });
+      } else if (field instanceof SelectField) {
+        field.onChange((e) => {
+          this.#onFieldChangeCallback(e);
+          setTimeout(() => this.#onNextButtonClick(), 200);
+        });
       } else if (field instanceof RadioField && this.config.autoProgressRadio) {
-        const combinedHandler = (event) => {
-          this.#onFieldChangeCallback(event);
-          this.#updateButtonVisibility(); // Crucial for conditional logic
+        field.onChange((e) => {
+          this.#onFieldChangeCallback(e);
+          this.#updateButtonVisibility();
           this.#onRadioSelect();
-        };
-        field.onChange(combinedHandler);
+        });
       } else {
         field.onChange(this.#onFieldChangeCallback, enterHandler);
       }
-
-      // Only show the active field.
       field.show(index === this.currentFieldIndex);
     });
 
+    // Set initial focus
     if (
       this.config.autoFocus &&
       this.fields[this.currentFieldIndex] &&
@@ -642,55 +704,28 @@ class LandeseitenForm {
     this.submitButton.style.display = "none";
     this.#onFieldChange();
     this.#updateButtonVisibility();
+    this.#updateProgressBar();
   }
 
-  /**
-   * Checks if a field is currently visible in the DOM.
-   * @param {Field} field The field to check.
-   * @returns {boolean} True if the field is visible.
-   * @private
-   */
   #isFieldVisible(field) {
     if (!field || !field.wrapper) return false;
-    // getComputedStyle is the most reliable way to check visibility.
-    const style = window.getComputedStyle(field.wrapper);
-    return style.display !== "none";
+    return window.getComputedStyle(field.wrapper).display !== "none";
   }
 
-  /**
-   * Finds the index of the next visible field.
-   * @param {number} startIndex Index to start searching from.
-   * @returns {number} The index of the next visible field, or -1.
-   * @private
-   */
   #findNextVisibleIndex(startIndex) {
     for (let i = startIndex + 1; i < this.fields.length; i++) {
-      if (this.#isFieldVisible(this.fields[i])) {
-        return i;
-      }
+      if (this.#isFieldVisible(this.fields[i])) return i;
     }
     return -1;
   }
 
-  /**
-   * Finds the index of the previous visible field.
-   * @param {number} startIndex Index to start searching from.
-   * @returns {number} The index of the previous visible field, or -1.
-   * @private
-   */
   #findPrevVisibleIndex(startIndex) {
     for (let i = startIndex - 1; i >= 0; i--) {
-      if (this.#isFieldVisible(this.fields[i])) {
-        return i;
-      }
+      if (this.#isFieldVisible(this.fields[i])) return i;
     }
     return -1;
   }
 
-  /**
-   * Handles the selection on a radio button to auto-progress.
-   * @private
-   */
   #onRadioSelect() {
     setTimeout(() => {
       if (!this.isAnimating && !this.nextButton.disabled) {
@@ -699,24 +734,15 @@ class LandeseitenForm {
     }, 150);
   }
 
-  /**
-   * Handles the 'Enter' key press to advance the form.
-   * @private
-   */
   #onEnterPressed() {
     if (!this.nextButton.disabled && !this.isAnimating) {
       this.#onNextButtonClick();
     }
   }
 
-  /**
-   * Handles the change event for the current field, validating it and updating button states.
-   * @private
-   */
   #onFieldChange() {
     const currentField = this.fields[this.currentFieldIndex];
     if (currentField && this.#isFieldVisible(currentField)) {
-      // Pass the entire config object to the validate method
       const isCurrentFieldValid = currentField.validate(this.config);
       this.nextButton.disabled = !isCurrentFieldValid;
     } else {
@@ -725,11 +751,6 @@ class LandeseitenForm {
     this.#updateButtonVisibility();
   }
 
-  /**
-   * Transitions the form to a new field index with animations and corrected scrolling.
-   * @param {number} newIndex The index of the field to transition to.
-   * @private
-   */
   #transitionToField(newIndex) {
     if (this.isAnimating) return;
     this.isAnimating = true;
@@ -744,8 +765,10 @@ class LandeseitenForm {
     const scrollToShowField = () => {
       if (this.config.mode === "reveal" && isForward) {
         const oldFieldRect = oldField.wrapper.getBoundingClientRect();
-        const scrollAmount = oldFieldRect.bottom - this.config.scrollTopMargin;
-        window.scrollBy({ top: scrollAmount, behavior: "smooth" });
+        window.scrollBy({
+          top: oldFieldRect.bottom - this.config.scrollTopMargin,
+          behavior: "smooth",
+        });
       } else {
         const fieldTop =
           newField.wrapper.getBoundingClientRect().top + window.scrollY;
@@ -763,6 +786,7 @@ class LandeseitenForm {
       }
       newField.show(true);
       scrollToShowField();
+
       if (this.config.autoFocus) {
         setTimeout(() => {
           newField.focus();
@@ -771,6 +795,7 @@ class LandeseitenForm {
 
       this.currentFieldIndex = newIndex;
       this.#onFieldChange();
+      this.#updateProgressBar();
       this.isAnimating = false;
     };
 
@@ -782,26 +807,16 @@ class LandeseitenForm {
     }
   }
 
-  /**
-   * Handles the click event for the 'Next' button. Finds the next visible
-   * field and transitions to it.
-   * @private
-   */
   #onNextButtonClick() {
     const nextIndex = this.#findNextVisibleIndex(this.currentFieldIndex);
     if (nextIndex === -1) {
-      this.#updateButtonVisibility(); // We're at the end.
+      this.#updateButtonVisibility();
       return;
     }
     this.fields[this.currentFieldIndex].wrapper.classList.add("step-completed");
     this.#transitionToField(nextIndex);
   }
 
-  /**
-   * Handles the click event for the 'Previous' button. Finds the
-   * previous visible field and transitions to it.
-   * @private
-   */
   #onPreviousButtonClick() {
     const prevIndex = this.#findPrevVisibleIndex(this.currentFieldIndex);
     if (prevIndex === -1) return;
@@ -809,31 +824,44 @@ class LandeseitenForm {
     this.#transitionToField(prevIndex);
   }
 
-  /**
-   * Updates the visibility of the Next, Previous, and Submit buttons
-   * based on the current field's position and validity in the sequence of visible fields.
-   * @private
-   */
   #updateButtonVisibility() {
     const currentFieldIsValid =
       this.fields.length > 0 &&
       this.fields[this.currentFieldIndex] &&
       !this.nextButton.disabled;
-
     const nextVisibleIndex = this.#findNextVisibleIndex(this.currentFieldIndex);
     const prevVisibleIndex = this.#findPrevVisibleIndex(this.currentFieldIndex);
 
-    const isLastVisibleField = nextVisibleIndex === -1;
-
-    if (isLastVisibleField && currentFieldIsValid) {
+    if (nextVisibleIndex === -1 && currentFieldIsValid) {
       this.submitButton.style.display = "inline-block";
       this.nextButton.style.display = "none";
     } else {
       this.submitButton.style.display = "none";
       this.nextButton.style.display = "inline-block";
     }
-
     this.previousButton.style.display =
       prevVisibleIndex !== -1 ? "inline-block" : "none";
+  }
+
+  #updateProgressBar() {
+    if (!this.progressBarEl || !this.progressFillEl) return;
+
+    // Filter visible fields to calculate accurate percentage
+    const visibleFields = this.fields.filter((f) => this.#isFieldVisible(f));
+    const currentVisibleIndex = visibleFields.indexOf(
+      this.fields[this.currentFieldIndex]
+    );
+    const total = visibleFields.length;
+
+    if (total <= 1) {
+      this.progressFillEl.style.width = "0%";
+      return;
+    }
+
+    const percent = Math.min(
+      100,
+      Math.max(0, ((currentVisibleIndex + 1) / total) * 100)
+    );
+    this.progressFillEl.style.width = percent + "%";
   }
 }
