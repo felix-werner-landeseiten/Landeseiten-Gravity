@@ -7,7 +7,7 @@
  *
  * @package LandeseitenForm
  * @since   1.0.0
- * @version 2.0.0
+ * @version 2.0.1
  */
 
 if ( ! defined( 'WPINC' ) ) {

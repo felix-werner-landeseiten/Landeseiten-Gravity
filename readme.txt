@@ -4,7 +4,7 @@ Tags: gravity forms, form, multi-step, one page, landing page, conversion, progr
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.txt
 
@@ -54,6 +54,10 @@ The plugin automatically ignores "Hidden" fields. To skip a visible field (e.g.,
 Yes! In version 2.0.0, go to the "Content & Text" tab in your Landeseiten Form configuration and enter your custom text (e.g., "Get Quote Now") in the Submit Button field.
 
 == Changelog ==
+
+= 2.0.1 =
+* **FIX:** Restored missing CSS variables for footer spacing. Buttons will now align correctly.
+* **IMPROVEMENT:** Optimized CSS file size by removing duplicate style blocks.
 
 = 2.0.0 =
 * **MAJOR RELEASE**
