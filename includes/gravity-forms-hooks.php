@@ -348,10 +348,14 @@ function lf_apply_form_settings( $form ) {
  */
 function lf_add_wrapper_class_to_html( $form_string, $form ) {
 	$form_id = isset( $form['id'] ) ? absint( $form['id'] ) : 0;
-	return str_replace(
-		'gform_wrapper',
-		'gform_wrapper cs-landeseiten-form landeseiten-form-active" data-form-id="' . $form_id,
-		$form_string
+
+	// Use regex to only modify the FIRST class attribute containing gform_wrapper.
+	// This avoids breaking IDs (gform_wrapper_1), JS references, etc.
+	return preg_replace(
+		'/(class="[^"]*)(gform_wrapper)([^"]*")/',
+		'$1$2 cs-landeseiten-form landeseiten-form-active$3 data-form-id="' . $form_id . '"',
+		$form_string,
+		1 // Limit: only first occurrence
 	);
 }
 
