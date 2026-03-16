@@ -2,77 +2,113 @@
  * == Landeseiten Form - Initializer ==
  *
  * Description:   Bootstraps the Landeseiten Form logic when the DOM is ready.
- * Handles merging of PHP settings with defaults and initializing form instances.
+ * Single source of truth for default configuration values.
+ * Handles AJAX re-initialization after Gravity Forms AJAX submissions.
  * Author:        Landeseiten.de
- * Version:       2.0.0
+ * Version:       2.0.2
  */
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Locate all forms marked as active by our PHP hooks
-  const landeseitenForms = document.querySelectorAll(
-    ".landeseiten-form-active"
-  );
+/**
+ * Default configuration — SINGLE SOURCE OF TRUTH.
+ * PHP settings from wp_localize_script override these per-form.
+ */
+const LF_DEFAULT_CONFIG = {
+  scrollTopMargin: 150,
+  mode: "reveal",
+  autoFocus: true,
+  enterToAdvance: true,
+  autoProgressRadio: true,
+  hideErrorUntilDirty: true,
+  progressBar: false,
+  buttonText: {
+    next: "Weiter →",
+    previous: "← Zurück",
+    submit: "Absenden",
+  },
+  errorMessages: {
+    required: "Dieses Feld ist erforderlich.",
+    email: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+    phone: "Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.",
+    url: "Bitte geben Sie eine gültige Web-Adresse ein.",
+    consent: "Bitte stimmen Sie den Bedingungen zu.",
+  },
+};
 
-  if (landeseitenForms.length === 0) {
+/**
+ * Track which form wrappers have been initialized to avoid double-init.
+ */
+const _lfInitializedForms = new WeakSet();
+
+/**
+ * Initialize a single Landeseiten form wrapper element.
+ *
+ * @param {HTMLElement} formElement - The .landeseiten-form-active wrapper.
+ */
+function lfInitForm(formElement) {
+  // Prevent double-initialization
+  if (_lfInitializedForms.has(formElement)) {
     return;
   }
 
-  // Default configuration values
-  // These act as fallbacks if no specific settings are provided from the backend.
-  const defaultConfig = {
-    scrollTopMargin: 150,
-    mode: "reveal",
-    autoFocus: true,
-    enterToAdvance: true,
-    autoProgressRadio: true,
-    hideErrorUntilDirty: true,
-    progressBar: false, // Default to false unless enabled in backend
-    buttonText: {
-      next: "Weiter →",
-      previous: "← Zurück",
-      submit: "Absenden",
-    },
-    errorMessages: {
-      required: "Dieses Feld ist erforderlich.",
-      email: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
-      phone: "Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.",
-      url: "Bitte geben Sie eine gültige Web-Adresse ein.",
-      consent: "Bitte stimmen Sie den Bedingungen zu.", // Default consent error
-    },
-  };
+  try {
+    const formId = formElement.getAttribute("data-form-id") || "";
+    const settingsVarName = "lf_form_settings_" + formId;
+    const settingsFromPHP =
+      typeof window[settingsVarName] !== "undefined"
+        ? window[settingsVarName]
+        : {};
 
-  // Retrieve settings passed from PHP via wp_localize_script
-  const settingsFromPHP =
-    typeof lf_form_settings !== "undefined" ? lf_form_settings : {};
+    // Deep merge: per-form PHP settings override defaults
+    const finalConfig = {
+      ...LF_DEFAULT_CONFIG,
+      ...settingsFromPHP,
+      buttonText: {
+        ...LF_DEFAULT_CONFIG.buttonText,
+        ...(settingsFromPHP.buttonText || {}),
+      },
+      errorMessages: {
+        ...LF_DEFAULT_CONFIG.errorMessages,
+        ...(settingsFromPHP.errorMessages || {}),
+      },
+    };
 
-  // --- Create the final configuration ---
-  // We perform a deep merge for nested objects (buttonText, errorMessages)
-  // to ensure user settings override defaults without deleting other keys.
-  const finalConfig = {
-    ...defaultConfig,
-    ...settingsFromPHP, // Merges top-level keys (mode, progressBar, etc.)
-    buttonText: {
-      ...defaultConfig.buttonText,
-      ...(settingsFromPHP.buttonText || {}),
-    },
-    errorMessages: {
-      ...defaultConfig.errorMessages,
-      ...(settingsFromPHP.errorMessages || {}),
-    },
-  };
+    const form = new LandeseitenForm(
+      formElement,
+      new GravityFieldsProvider(formElement),
+      new GravityFormControlsProvider(formElement),
+      finalConfig
+    );
+    form.init();
+    _lfInitializedForms.add(formElement);
+  } catch (error) {
+    console.error("Landeseiten Form Initialization Error:", error);
+  }
+}
 
-  // Initialize logic for each matching form found on the page
-  landeseitenForms.forEach((formElement) => {
-    try {
-      const form = new LandeseitenForm(
-        formElement,
-        new GravityFieldsProvider(formElement),
-        new GravityFormControlsProvider(formElement),
-        finalConfig
-      );
-      form.init();
-    } catch (error) {
-      console.error("Landeseiten Form Initialization Error:", error);
+/**
+ * Initialize all Landeseiten forms on the page.
+ */
+function lfInitAll() {
+  document
+    .querySelectorAll(".landeseiten-form-active")
+    .forEach((el) => lfInitForm(el));
+}
+
+// --- Boot on DOMContentLoaded ---
+document.addEventListener("DOMContentLoaded", lfInitAll);
+
+// --- Re-initialize after Gravity Forms AJAX submissions ---
+// GF triggers gform_post_render after AJAX form submission or page change.
+// This ensures the multi-step UI re-attaches after a validation error reload.
+if (typeof jQuery !== "undefined") {
+  jQuery(document).on("gform_post_render", function (event, formId) {
+    const wrapper = document.querySelector(
+      '.landeseiten-form-active[data-form-id="' + formId + '"]'
+    );
+    if (wrapper) {
+      // Allow the form to re-init by removing from tracked set
+      _lfInitializedForms.delete(wrapper);
+      lfInitForm(wrapper);
     }
   });
-});
+}

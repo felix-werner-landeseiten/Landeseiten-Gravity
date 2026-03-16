@@ -46,6 +46,7 @@ function lf_render_settings_meta_box( $post ) {
 	// --- 1. Retrieve General Settings ---
 	$saved_form_id   = get_post_meta( $post->ID, '_lf_gravity_form_id', true );
 	$saved_mode      = get_post_meta( $post->ID, '_lf_mode', true );
+	$saved_cal_lang  = get_post_meta( $post->ID, '_lf_calendar_lang', true );
 	$saved_max_width = get_post_meta( $post->ID, '_lf_container_max_width', true );
 
 	// --- 2. Retrieve Design & Color Settings ---
@@ -78,6 +79,14 @@ function lf_render_settings_meta_box( $post ) {
 	$saved_font_family     = get_post_meta( $post->ID, '_lf_font_family', true );
 	$saved_label_font_size = get_post_meta( $post->ID, '_lf_label_font_size', true );
 	$saved_input_font_size = get_post_meta( $post->ID, '_lf_input_font_size', true );
+
+	// Button Colors (Primary & Secondary)
+	$saved_primary_btn_bg     = get_post_meta( $post->ID, '_lf_primary_btn_bg', true );
+	$saved_primary_btn_text   = get_post_meta( $post->ID, '_lf_primary_btn_text_color', true );
+	$saved_primary_btn_border = get_post_meta( $post->ID, '_lf_primary_btn_border', true );
+	$saved_secondary_btn_bg     = get_post_meta( $post->ID, '_lf_secondary_btn_bg', true );
+	$saved_secondary_btn_text   = get_post_meta( $post->ID, '_lf_secondary_btn_text_color', true );
+	$saved_secondary_btn_border = get_post_meta( $post->ID, '_lf_secondary_btn_border', true );
 
 	// --- 5. Retrieve Error Messages ---
 	$saved_error_req     = get_post_meta( $post->ID, '_lf_error_required', true );
@@ -181,6 +190,13 @@ function lf_render_settings_meta_box( $post ) {
 							<input type="checkbox" id="lf_enable_shadow" name="lf_enable_shadow" value="1" <?php checked( $saved_shadow, '1' ); ?> />
 							<label for="lf_enable_shadow"><?php esc_html_e( 'Add shadow to container?', 'landeseiten-form' ); ?></label>
 						</div>
+					</div>
+					<div class="lf-field">
+						<label><?php esc_html_e( 'Calendar Language', 'landeseiten-form' ); ?></label>
+						<select name="lf_calendar_lang">
+							<option value="en" <?php selected( $saved_cal_lang ?: 'en', 'en' ); ?>><?php esc_html_e( 'English', 'landeseiten-form' ); ?></option>
+							<option value="de" <?php selected( $saved_cal_lang, 'de' ); ?>><?php esc_html_e( 'Deutsch', 'landeseiten-form' ); ?></option>
+						</select>
 					</div>
 				</div>
 			</div>
@@ -294,6 +310,36 @@ function lf_render_settings_meta_box( $post ) {
 					</div>
 				</div>
 			</div>
+
+			<div class="lf-card">
+				<h3 class="lf-card-title">🎨 <?php esc_html_e( 'Button Colors', 'landeseiten-form' ); ?></h3>
+				<div class="lf-grid">
+					<div class="lf-field">
+						<label><?php esc_html_e( 'Primary Background', 'landeseiten-form' ); ?></label>
+						<input type="text" name="lf_primary_btn_bg" class="lf-color-picker" value="<?php echo esc_attr( $saved_primary_btn_bg ); ?>" />
+					</div>
+					<div class="lf-field">
+						<label><?php esc_html_e( 'Primary Text', 'landeseiten-form' ); ?></label>
+						<input type="text" name="lf_primary_btn_text_color" class="lf-color-picker" value="<?php echo esc_attr( $saved_primary_btn_text ); ?>" />
+					</div>
+					<div class="lf-field">
+						<label><?php esc_html_e( 'Primary Border', 'landeseiten-form' ); ?></label>
+						<input type="text" name="lf_primary_btn_border" value="<?php echo esc_attr( $saved_primary_btn_border ); ?>" placeholder="e.g. 2px solid #333" />
+					</div>
+					<div class="lf-field">
+						<label><?php esc_html_e( 'Back Button Background', 'landeseiten-form' ); ?></label>
+						<input type="text" name="lf_secondary_btn_bg" class="lf-color-picker" value="<?php echo esc_attr( $saved_secondary_btn_bg ); ?>" />
+					</div>
+					<div class="lf-field">
+						<label><?php esc_html_e( 'Back Button Text', 'landeseiten-form' ); ?></label>
+						<input type="text" name="lf_secondary_btn_text_color" class="lf-color-picker" value="<?php echo esc_attr( $saved_secondary_btn_text ); ?>" />
+					</div>
+					<div class="lf-field">
+						<label><?php esc_html_e( 'Back Button Border', 'landeseiten-form' ); ?></label>
+						<input type="text" name="lf_secondary_btn_border" value="<?php echo esc_attr( $saved_secondary_btn_border ); ?>" placeholder="e.g. 1px solid #ccc" />
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<div id="tab-text" class="lf-tab-content">
@@ -401,6 +447,7 @@ function lf_save_post_meta( $post_id ) {
 		'_lf_mode'                     => 'sanitize_text_field',
 		'_lf_container_max_width'      => 'absint',
 		'_lf_enable_shadow'            => 'sanitize_text_field',
+		'_lf_calendar_lang'            => 'sanitize_text_field',
 		
 		// Global Colors
 		'_lf_accent_color'             => 'sanitize_hex_color',
@@ -438,6 +485,14 @@ function lf_save_post_meta( $post_id ) {
 		'_lf_input_height'             => 'absint',
 		'_lf_btn_border_radius'        => 'absint',
 		'_lf_btn_full_width'           => 'sanitize_text_field',
+
+		// Button Colors
+		'_lf_primary_btn_bg'           => 'sanitize_hex_color',
+		'_lf_primary_btn_text_color'   => 'sanitize_hex_color',
+		'_lf_primary_btn_border'       => 'sanitize_text_field',
+		'_lf_secondary_btn_bg'         => 'sanitize_hex_color',
+		'_lf_secondary_btn_text_color' => 'sanitize_hex_color',
+		'_lf_secondary_btn_border'     => 'sanitize_text_field',
 	];
 
 	foreach ( $fields as $key => $callback ) {
@@ -457,4 +512,4 @@ function lf_save_post_meta( $post_id ) {
 		}
 	}
 }
-add_action( 'save_post', 'lf_save_post_meta' );
+add_action( 'save_post_lf_form', 'lf_save_post_meta' );

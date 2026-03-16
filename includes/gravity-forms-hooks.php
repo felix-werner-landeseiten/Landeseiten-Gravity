@@ -11,7 +11,7 @@
  *
  * @package LandeseitenForm
  * @since   1.0.0
- * @version 2.0.0
+ * @version 2.0.2
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -50,7 +50,8 @@ final class LF_Dynamic_CSS {
 		if ( ! empty( self::$css ) ) {
 			// Simple minification: remove newlines and double spaces.
 			$minified_css = str_replace( [ "\r", "\n", "  " ], '', self::$css );
-			echo "<style type='text/css' id='landeseiten-form-dynamic-styles'>" . $minified_css . "</style>";
+			// Escape to prevent XSS via meta values like font-family.
+			echo "<style type='text/css' id='landeseiten-form-dynamic-styles'>" . wp_strip_all_tags( $minified_css ) . "</style>";
 		}
 	}
 }
@@ -152,23 +153,19 @@ add_filter( 'gform_pre_render', 'lf_apply_form_settings', 10 );
 function lf_apply_form_settings( $form ) {
 	$form_id = $form['id'];
 
-	// Look for a Landeseiten Config Post associated with this Form ID
-	$query = new WP_Query([
-		'post_type'      => 'lf_form',
-		'posts_per_page' => 1,
-		'meta_key'       => '_lf_gravity_form_id',
-		'meta_value'     => $form_id,
-		'fields'         => 'ids'
-	]);
+	// Look for a Landeseiten Config Post associated with this Form ID (cached)
+	$config_post_id = lf_get_config_post_id( $form_id );
 
 	// If a config exists, apply it
-	if ( $query->have_posts() ) {
-		$config_post_id = $query->posts[0];
+	if ( $config_post_id ) {
 
-		// Disable default Gravity Forms theme CSS to prevent conflicts
-		add_filter( 'gform_disable_form_theme_css', '__return_true' );
+		// Conditionally enqueue assets only when a configured form is on-page
+		lf_enqueue_registered_assets();
+
+		// Disable default Gravity Forms theme CSS for THIS form only
+		add_filter( 'gform_disable_form_theme_css_' . $form_id, '__return_true' );
 		
-		// Add custom wrapper class
+		// Add custom wrapper class and data attributes
 		add_filter( 'gform_get_form_filter_' . $form_id, 'lf_add_wrapper_class_to_html', 10, 2 );
 
 		// --- 1. Prepare Date Picker Configs ---
@@ -199,6 +196,13 @@ function lf_apply_form_settings( $form ) {
 		if ( $mode = get_post_meta( $config_post_id, '_lf_mode', true ) ) {
 			$settings_for_js['mode'] = $mode;
 		}
+
+		// Calendar Language
+		$cal_lang = get_post_meta( $config_post_id, '_lf_calendar_lang', true );
+		if ( $cal_lang && $cal_lang !== 'en' ) {
+			$settings_for_js['calendarLang'] = $cal_lang;
+			wp_enqueue_script( 'flatpickr-l10n-' . $cal_lang );
+		}
 		
 		// Progress Bar
 		if ( get_post_meta( $config_post_id, '_lf_enable_progress_bar', true ) ) {
@@ -228,8 +232,13 @@ function lf_apply_form_settings( $form ) {
 		if ( $error_email ) $settings_for_js['errorMessages']['email'] = $error_email;
 		if ( $error_phone ) $settings_for_js['errorMessages']['phone'] = $error_phone;
 		if ( $error_url ) $settings_for_js['errorMessages']['url'] = $error_url;
+
+		// Consent error message
+		$error_consent = get_post_meta( $config_post_id, '_lf_error_consent', true );
+		if ( $error_consent ) $settings_for_js['errorMessages']['consent'] = $error_consent;
 		
-		wp_localize_script( 'landeseiten-form-init-script', 'lf_form_settings', $settings_for_js );
+		// Use per-form variable name to prevent clobbering on multi-form pages
+		wp_localize_script( 'landeseiten-form-init-script', 'lf_form_settings_' . $form_id, $settings_for_js );
 
 		// --- 3. Generate Dynamic CSS Variables ---
 		$get_clean_meta = function( $key ) use ( $config_post_id ) {
@@ -237,8 +246,8 @@ function lf_apply_form_settings( $form ) {
 		};
 
 		$css = "";
-		// Target this specific form instance
-		$selector = ".gform_wrapper.cs-landeseiten-form[data-form-index='" . absint( $form['form_index'] ) . "']";
+		// Target this specific form by its Gravity Forms ID
+		$selector = ".gform_wrapper.cs-landeseiten-form[data-form-id='" . absint( $form_id ) . "']";
 
 		$css .= "{$selector} {";
 		
@@ -253,9 +262,9 @@ function lf_apply_form_settings( $form ) {
 		if ( $v = $get_clean_meta( '_lf_input_font_size' ) ) $css .= "--landeseiten-form-input-font-size: {$v}px;";
 		if ( $v = $get_clean_meta( '_lf_font_family' ) ) $css .= "font-family: {$v};";
 		
-		// Input Styles
-		if ( $v = $get_clean_meta( '_lf_input_bg_color' ) ) $css .= "--landeseiten-form-bg-color: {$v};";
-		if ( $v = $get_clean_meta( '_lf_input_text_color' ) ) $css .= "--landeseiten-form-text-color: {$v};";
+		// Input Styles (use dedicated variables to avoid collision with form-level bg/text)
+		if ( $v = $get_clean_meta( '_lf_input_bg_color' ) ) $css .= "--landeseiten-form-input-bg-color: {$v};";
+		if ( $v = $get_clean_meta( '_lf_input_text_color' ) ) $css .= "--landeseiten-form-input-text-color: {$v};";
 		if ( $v = $get_clean_meta( '_lf_input_border_color' ) ) $css .= "--landeseiten-form-border-color: {$v};";
 		if ( $v = $get_clean_meta( '_lf_input_height' ) ) $css .= "--landeseiten-form-input-height: {$v}px;";
 		
@@ -338,7 +347,12 @@ function lf_apply_form_settings( $form ) {
  * @return string Modified form HTML.
  */
 function lf_add_wrapper_class_to_html( $form_string, $form ) {
-	return str_replace( 'gform_wrapper', 'gform_wrapper cs-landeseiten-form landeseiten-form-active', $form_string );
+	$form_id = isset( $form['id'] ) ? absint( $form['id'] ) : 0;
+	return str_replace(
+		'gform_wrapper',
+		'gform_wrapper cs-landeseiten-form landeseiten-form-active" data-form-id="' . $form_id,
+		$form_string
+	);
 }
 
 /* ---------------------------------------------------------------------------
@@ -396,3 +410,58 @@ function lf_display_date_range_value( $value, $field, $entry, $form ) {
 	}
 	return $value;
 }
+
+/* ---------------------------------------------------------------------------
+ * 4. CACHED CONFIG LOOKUP
+ * --------------------------------------------------------------------------- */
+
+/**
+ * Returns the config post ID for a given Gravity Form ID, with caching.
+ *
+ * Uses wp_cache to avoid repeated WP_Query calls on the same page load.
+ *
+ * @param int $form_id The Gravity Form ID.
+ * @return int|false The config post ID or false if none found.
+ * @since 2.0.2
+ */
+function lf_get_config_post_id( $form_id ) {
+	$cache_key = 'lf_config_for_gf_' . absint( $form_id );
+	$cached    = wp_cache_get( $cache_key, 'landeseiten_form' );
+
+	if ( false !== $cached ) {
+		return $cached;
+	}
+
+	$query = new WP_Query( [
+		'post_type'      => 'lf_form',
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+		'meta_key'       => '_lf_gravity_form_id',
+		'meta_value'     => absint( $form_id ),
+		'fields'         => 'ids',
+		'no_found_rows'  => true,
+	] );
+
+	$result = $query->have_posts() ? $query->posts[0] : false;
+	wp_cache_set( $cache_key, $result, 'landeseiten_form' );
+
+	return $result;
+}
+
+/**
+ * Invalidates the config cache when a Landeseiten Form post is saved.
+ *
+ * @param int $post_id The post ID being saved.
+ * @since 2.0.2
+ */
+function lf_invalidate_config_cache( $post_id ) {
+	if ( 'lf_form' !== get_post_type( $post_id ) ) {
+		return;
+	}
+
+	$form_id = get_post_meta( $post_id, '_lf_gravity_form_id', true );
+	if ( $form_id ) {
+		wp_cache_delete( 'lf_config_for_gf_' . absint( $form_id ), 'landeseiten_form' );
+	}
+}
+add_action( 'save_post_lf_form', 'lf_invalidate_config_cache' );
