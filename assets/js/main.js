@@ -551,17 +551,24 @@ class GravityFormControlsProvider extends ControlsProvider {
       return { nextButton: null, previousButton: null, submitButton: null };
     }
 
-    const nextButton = document.createElement("button");
-    nextButton.className = "gform_button button button-next";
-    nextButton.type = "button";
-    nextButton.disabled = true;
+    // Reuse existing custom buttons if already created (prevents duplicates on re-init)
+    let nextButton = container.querySelector(".button-next");
+    let previousButton = container.querySelector(".button-previous");
 
-    const previousButton = document.createElement("button");
-    previousButton.className = "gform_button button button-previous";
-    previousButton.type = "button";
+    if (!nextButton) {
+      nextButton = document.createElement("button");
+      nextButton.className = "gform_button button button-next";
+      nextButton.type = "button";
+      nextButton.disabled = true;
+      container.insertBefore(nextButton, submitButton);
+    }
 
-    container.insertBefore(previousButton, submitButton);
-    container.insertBefore(nextButton, submitButton);
+    if (!previousButton) {
+      previousButton = document.createElement("button");
+      previousButton.className = "gform_button button button-previous";
+      previousButton.type = "button";
+      container.insertBefore(previousButton, nextButton);
+    }
 
     return { nextButton, previousButton, submitButton };
   }
