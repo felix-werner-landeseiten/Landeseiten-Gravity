@@ -705,8 +705,9 @@ class LandeseitenForm {
 
   #isFieldVisible(field) {
     if (!field || !field.wrapper) return false;
-    const style = window.getComputedStyle(field.wrapper);
-    return style.display !== "none" && style.visibility !== "hidden";
+    // Only check display:none (used by GF conditional logic).
+    // Do NOT check visibility — our own CSS uses visibility:hidden for non-active fields.
+    return window.getComputedStyle(field.wrapper).display !== "none";
   }
 
   #findNextVisibleIndex(startIndex) {
