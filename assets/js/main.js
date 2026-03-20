@@ -262,11 +262,26 @@ class InputField extends Field {
           } catch (e) {}
         }
 
+        // Determine locale from per-form settings
+        const settingsVarName = "lf_form_settings_" + formId;
+        const formSettings = window[settingsVarName] || {};
+        const localeConfig = {};
+        if (formSettings.calendarLang && formSettings.calendarLang !== "en") {
+          const localeObj =
+            typeof flatpickr.l10ns !== "undefined"
+              ? flatpickr.l10ns[formSettings.calendarLang]
+              : null;
+          if (localeObj) {
+            localeConfig.locale = localeObj;
+          }
+        }
+
         flatpickr(this.input, {
+          ...localeConfig,
           mode: mode,
           minDate: config.minDate || null,
           maxDate: config.maxDate || null,
-          dateFormat: "m/d/Y",
+          dateFormat: "d.m.Y",
           disableMobile: "true",
           onChange: function (selectedDates, dateStr, instance) {
             if (mode === "range") {
@@ -446,12 +461,15 @@ class GravityFieldsProvider extends FieldsProvider {
   }
 
   #resolveSingle(wrapper, config) {
-    // Skip hidden or utility fields
+    // Skip hidden, utility, section, and page-break fields
     if (
       wrapper.style.display === "none" ||
       wrapper.classList.contains("gform_validation_container") ||
       wrapper.classList.contains("gfield_visibility_hidden") ||
-      wrapper.classList.contains("lf-skip")
+      wrapper.classList.contains("lf-skip") ||
+      wrapper.classList.contains("gsection") ||
+      wrapper.classList.contains("gfield--type-section") ||
+      wrapper.classList.contains("gfield--type-page")
     ) {
       return null;
     }
@@ -526,24 +544,31 @@ class GravityFormControlsProvider extends ControlsProvider {
   }
 
   provide(config) {
-    const container = this.form.querySelector(".gform_footer");
+    const container = this.form.querySelector(".gform-footer") || this.form.querySelector(".gform_footer");
     const submitButton = container?.querySelector("input[type='submit']");
 
     if (!container || !submitButton) {
       return { nextButton: null, previousButton: null, submitButton: null };
     }
 
-    const nextButton = document.createElement("button");
-    nextButton.className = "gform_button button button-next";
-    nextButton.type = "button";
-    nextButton.disabled = true;
+    // Reuse existing custom buttons if already created (prevents duplicates on re-init)
+    let nextButton = container.querySelector(".button-next");
+    let previousButton = container.querySelector(".button-previous");
 
-    const previousButton = document.createElement("button");
-    previousButton.className = "gform_button button button-previous";
-    previousButton.type = "button";
+    if (!nextButton) {
+      nextButton = document.createElement("button");
+      nextButton.className = "gform_button button button-next";
+      nextButton.type = "button";
+      nextButton.disabled = true;
+      container.insertBefore(nextButton, submitButton);
+    }
 
-    container.insertBefore(previousButton, submitButton);
-    container.insertBefore(nextButton, submitButton);
+    if (!previousButton) {
+      previousButton = document.createElement("button");
+      previousButton.className = "gform_button button button-previous";
+      previousButton.type = "button";
+      container.insertBefore(previousButton, nextButton);
+    }
 
     return { nextButton, previousButton, submitButton };
   }
@@ -560,42 +585,10 @@ class LandeseitenForm {
   #onEnterPressedCallback;
 
   constructor(form, fieldsProvider, controlsProvider, options = {}) {
-    const defaultConfig = {
-      mode: "reveal",
-      autoFocus: true,
-      progressBar: false,
-      enterToAdvance: true,
-      autoProgressRadio: true,
-      hideErrorUntilDirty: true,
-      scrollTopMargin: 40,
-      buttonText: {
-        next: "Weiter →",
-        previous: "← Zurück",
-        submit: "Absenden",
-      },
-      errorMessages: {
-        required: "Required",
-        email: "Invalid Email",
-        phone: "Invalid Phone",
-        url: "Invalid URL",
-      },
-    };
-
     this.formElement = form;
 
-    // Merge configuration
-    this.config = {
-      ...defaultConfig,
-      ...options,
-      buttonText: {
-        ...defaultConfig.buttonText,
-        ...(options.buttonText || {}),
-      },
-      errorMessages: {
-        ...defaultConfig.errorMessages,
-        ...(options.errorMessages || {}),
-      },
-    };
+    // Use options as-is; init.js is the single source of truth for defaults.
+    this.config = options;
 
     this.fields = fieldsProvider.provide(this.config);
     const { nextButton, previousButton, submitButton } =
@@ -620,6 +613,9 @@ class LandeseitenForm {
       if (this.submitButton) this.submitButton.style.display = "block";
       return;
     }
+
+    // Signal to CSS that JS is in control of field visibility
+    this.formElement.classList.add("js-initialized");
 
     this.formElement.dataset.mode = this.config.mode;
     this.nextButton.textContent = this.config.buttonText.next;

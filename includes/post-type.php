@@ -50,15 +50,53 @@ function lf_register_post_type() {
 		'show_in_menu'       => true,
 		'query_var'          => false,
 		'rewrite'            => false,
-		'capability_type'    => 'post',
+		'capability_type'    => 'lf_form',
+		'map_meta_cap'       => true,
 		'has_archive'        => false,
 		'hierarchical'       => false,
 		'menu_position'      => 20, // Position below "Pages".
-		'menu_icon'          => 'dashicons-clipboard', // Professional clipboard icon.
-		'supports'           => [ 'title' ], // We only need the title; settings are in Meta Boxes.
-		'show_in_rest'       => false, // We do not need Gutenberg for this config CPT.
+		'menu_icon'          => 'dashicons-clipboard',
+		'supports'           => [ 'title' ],
+		'show_in_rest'       => false,
 	];
 
 	register_post_type( 'lf_form', $args );
 }
 add_action( 'init', 'lf_register_post_type' );
+
+/**
+ * Grants administrators the custom capabilities for managing Landeseiten Forms.
+ *
+ * Runs on plugin activation or admin_init to ensure caps are always set.
+ *
+ * @since 2.0.2
+ */
+function lf_add_admin_capabilities() {
+	$role = get_role( 'administrator' );
+	if ( ! $role ) {
+		return;
+	}
+
+	$caps = [
+		'edit_lf_form',
+		'read_lf_form',
+		'delete_lf_form',
+		'edit_lf_forms',
+		'edit_others_lf_forms',
+		'publish_lf_forms',
+		'read_private_lf_forms',
+		'delete_lf_forms',
+		'delete_private_lf_forms',
+		'delete_published_lf_forms',
+		'delete_others_lf_forms',
+		'edit_private_lf_forms',
+		'edit_published_lf_forms',
+	];
+
+	foreach ( $caps as $cap ) {
+		if ( ! $role->has_cap( $cap ) ) {
+			$role->add_cap( $cap );
+		}
+	}
+}
+add_action( 'admin_init', 'lf_add_admin_capabilities' );

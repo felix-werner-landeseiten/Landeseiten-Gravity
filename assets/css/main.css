@@ -18,6 +18,8 @@
   --landeseiten-form-bg-color: #ffffff;
   --landeseiten-form-border-color: #cccccc;
   --landeseiten-form-border-color-light: #e9e9e9;
+  --landeseiten-form-input-bg-color: var(--landeseiten-form-bg-color);
+  --landeseiten-form-input-text-color: var(--landeseiten-form-text-color);
   --landeseiten-form-disabled-bg: #cccccc;
   --landeseiten-form-disabled-color: #666666;
   --landeseiten-form-progress-color: #00c853;
@@ -124,7 +126,9 @@
 /* --- 4. Field Visibility & States --- */
 /* ==================================== */
 
-.gform_wrapper.cs-landeseiten-form .gfield:not(.active) {
+/* Fields are hidden ONLY after JS has initialized the form.
+   Before JS runs, the first field stays visible as a fallback. */
+.gform_wrapper.cs-landeseiten-form.js-initialized .gfield:not(.active) {
   opacity: 0;
   visibility: hidden;
   position: absolute;
@@ -136,6 +140,11 @@
   overflow: hidden;
   border: none;
   transition: none;
+}
+
+/* Before JS: hide all fields except the first visible one */
+.gform_wrapper.cs-landeseiten-form:not(.js-initialized) .gfield:not(:first-of-type) {
+  display: none;
 }
 
 .gform_wrapper.cs-landeseiten-form .gfield.active {
@@ -196,11 +205,11 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
   input:not([type="radio"]):not([type="checkbox"]),
 .gform_wrapper.cs-landeseiten-form .ginput_container select,
 .gform_wrapper.cs-landeseiten-form .ginput_container textarea {
-  background-color: var(--landeseiten-form-bg-color);
+  background-color: var(--landeseiten-form-input-bg-color, var(--landeseiten-form-bg-color));
   border: var(--landeseiten-form-input-border-width) solid
     var(--landeseiten-form-border-color);
   border-radius: var(--landeseiten-form-input-border-radius);
-  color: var(--landeseiten-form-text-color);
+  color: var(--landeseiten-form-input-text-color, var(--landeseiten-form-text-color));
   font-size: var(--landeseiten-form-input-font-size);
   height: var(--landeseiten-form-input-height);
   width: 100%;
@@ -233,6 +242,7 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
 }
 .gform_wrapper.cs-landeseiten-form input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* ================================= */
@@ -242,9 +252,14 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
 .gform_wrapper.cs-landeseiten-form input[type="radio"],
 .gform_wrapper.cs-landeseiten-form input[type="checkbox"] {
   position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .gform_wrapper.cs-landeseiten-form .gfield_checkbox,
@@ -402,7 +417,8 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
 /* --- 9. Footer & Navigation --- */
 /* ================================= */
 
-.gform_wrapper.cs-landeseiten-form .gform-footer {
+.gform_wrapper.cs-landeseiten-form .gform-footer,
+.gform_wrapper.cs-landeseiten-form .gform_footer {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -591,4 +607,32 @@ body .ui-datepicker {
 
 .flatpickr-day.today {
   border-color: var(--landeseiten-form-accent-color, #0073aa) !important;
+}
+
+/* ================================= */
+/* --- 12. RTL Support --- */
+/* ================================= */
+
+[dir="rtl"] .gform_wrapper.cs-landeseiten-form[data-mode="paged"]:not(.is-reversing)
+  .gfield.active {
+  animation-name: slideInFromLeft;
+}
+[dir="rtl"] .gform_wrapper.cs-landeseiten-form[data-mode="paged"]:not(.is-reversing)
+  .gfield.animating-out {
+  animation-name: slideOutToRight;
+}
+[dir="rtl"] .gform_wrapper.cs-landeseiten-form[data-mode="paged"].is-reversing
+  .gfield.active {
+  animation-name: slideInFromRight;
+}
+[dir="rtl"] .gform_wrapper.cs-landeseiten-form[data-mode="paged"].is-reversing
+  .gfield.animating-out {
+  animation-name: slideOutToLeft;
+}
+
+/* Focus ring for keyboard accessibility */
+.gform_wrapper.cs-landeseiten-form input[type="radio"]:focus + label,
+.gform_wrapper.cs-landeseiten-form input[type="checkbox"]:focus + label {
+  outline: 2px solid var(--landeseiten-form-accent-color, #0073aa);
+  outline-offset: 2px;
 }

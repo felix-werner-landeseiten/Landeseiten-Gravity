@@ -2,10 +2,13 @@
 /**
  * Enqueue scripts and styles for the front end.
  *
- * Handles loading of external libraries (Flatpickr), main CSS, and the core
- * JavaScript logic required for the multi-step form functionality.
+ * Handles conditional loading of external libraries (Flatpickr), main CSS,
+ * and the core JavaScript logic — only on pages that have a configured
+ * Landeseiten form.
  *
  * @package LandeseitenForm
+ * @since   1.0.0
+ * @version 2.0.2
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -13,46 +16,71 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Enqueue frontend assets.
+ * Register (but don't enqueue) frontend assets.
  *
- * @since 1.0.0
+ * Assets are only enqueued later by lf_apply_form_settings() via
+ * lf_enqueue_registered_assets() when a configured form is found on the page.
+ *
+ * @since 2.0.2
  */
-function lf_enqueue_assets() {
+function lf_register_assets() {
+    // 1. Library: Flatpickr (bundled locally for reliability)
+    wp_register_style( 'flatpickr-css', LF_PLUGIN_URL . 'vendor/flatpickr/css/flatpickr.min.css', [], '4.6.13' );
+    wp_register_style( 'flatpickr-airbnb', LF_PLUGIN_URL . 'vendor/flatpickr/css/airbnb.css', [ 'flatpickr-css' ], '4.6.13' );
+    wp_register_script( 'flatpickr-js', LF_PLUGIN_URL . 'vendor/flatpickr/js/flatpickr.min.js', [], '4.6.13', true );
 
-    // 1. External Library: Flatpickr (Required for Date Range Picker)
-    // We use the Airbnb theme for a cleaner, modern look out-of-the-box.
-    wp_enqueue_style( 'flatpickr-css', 'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css', [], '4.6.13' );
-    wp_enqueue_style( 'flatpickr-airbnb', 'https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css', ['flatpickr-css'], '4.6.13' );
-    wp_enqueue_script( 'flatpickr-js', 'https://cdn.jsdelivr.net/npm/flatpickr', [], '4.6.13', true );
+    // Locale files (loaded conditionally by gravity-forms-hooks.php)
+    wp_register_script( 'flatpickr-l10n-de', LF_PLUGIN_URL . 'vendor/flatpickr/js/l10n-de.js', [ 'flatpickr-js' ], '4.6.13', true );
 
     // 2. Main Stylesheet
-    // Contains all core layout, animations, and variable-based theming.
-    wp_enqueue_style(
+    wp_register_style(
         'landeseiten-form-styles',
         LF_PLUGIN_URL . 'assets/css/main.css',
         [],
-        LF_VERSION // Uses the constant defined in the main plugin file
+        LF_VERSION
     );
 
     // 3. Main JavaScript Logic
-    // Contains the core classes (Field, Validator, LandeseitenForm) and progress bar logic.
-    // 'flatpickr-js' is listed as a dependency to ensure the library loads first.
-    wp_enqueue_script(
+    wp_register_script(
         'landeseiten-form-main-script',
         LF_PLUGIN_URL . 'assets/js/main.js',
-        ['flatpickr-js'], 
+        [ 'flatpickr-js' ],
         LF_VERSION,
         true
     );
 
     // 4. Initializer Script
-    // Bootstraps the form instance when the DOM is ready.
-    wp_enqueue_script(
+    wp_register_script(
         'landeseiten-form-init-script',
         LF_PLUGIN_URL . 'assets/js/init.js',
-        ['landeseiten-form-main-script'],
+        [ 'landeseiten-form-main-script' ],
         LF_VERSION,
         true
     );
 }
-add_action( 'wp_enqueue_scripts', 'lf_enqueue_assets' );
+add_action( 'wp_enqueue_scripts', 'lf_register_assets', 5 );
+
+/**
+ * Enqueue the previously registered assets.
+ *
+ * Called from gravity-forms-hooks.php when a configured form is detected
+ * on the current page. This ensures assets only load where needed.
+ *
+ * @since 2.0.2
+ */
+function lf_enqueue_registered_assets() {
+    static $enqueued = false;
+
+    if ( $enqueued ) {
+        return;
+    }
+
+    wp_enqueue_style( 'flatpickr-css' );
+    wp_enqueue_style( 'flatpickr-airbnb' );
+    wp_enqueue_script( 'flatpickr-js' );
+    wp_enqueue_style( 'landeseiten-form-styles' );
+    wp_enqueue_script( 'landeseiten-form-main-script' );
+    wp_enqueue_script( 'landeseiten-form-init-script' );
+
+    $enqueued = true;
+}
