@@ -705,7 +705,8 @@ class LandeseitenForm {
 
   #isFieldVisible(field) {
     if (!field || !field.wrapper) return false;
-    return window.getComputedStyle(field.wrapper).display !== "none";
+    const style = window.getComputedStyle(field.wrapper);
+    return style.display !== "none" && style.visibility !== "hidden";
   }
 
   #findNextVisibleIndex(startIndex) {
