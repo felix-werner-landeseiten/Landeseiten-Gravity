@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.0.0
+ * Version:       2.1.2
  */
 
 // -----------------------------------------------------------------------------
@@ -461,9 +461,10 @@ class GravityFieldsProvider extends FieldsProvider {
   }
 
   #resolveSingle(wrapper, config) {
-    // Skip hidden, utility, section, and page-break fields
+    // Skip hidden, utility, section, and page-break fields.
+    // Use getComputedStyle to catch fields hidden via CSS classes, not just inline styles.
     if (
-      wrapper.style.display === "none" ||
+      window.getComputedStyle(wrapper).display === "none" ||
       wrapper.classList.contains("gform_validation_container") ||
       wrapper.classList.contains("gfield_visibility_hidden") ||
       wrapper.classList.contains("lf-skip") ||
@@ -723,8 +724,13 @@ class LandeseitenForm {
 
   #onRadioSelect() {
     setTimeout(() => {
-      if (!this.isAnimating && !this.nextButton.disabled) {
-        this.#onNextButtonClick();
+      if (!this.isAnimating) {
+        // Re-validate field state before checking if we can advance,
+        // prevents race conditions when radios fire rapidly.
+        this.#onFieldChange();
+        if (!this.nextButton.disabled) {
+          this.#onNextButtonClick();
+        }
       }
     }, 150);
   }
@@ -826,9 +832,13 @@ class LandeseitenForm {
       !this.nextButton.disabled;
     const nextVisibleIndex = this.#findNextVisibleIndex(this.currentFieldIndex);
     const prevVisibleIndex = this.#findPrevVisibleIndex(this.currentFieldIndex);
+    const isLastField = nextVisibleIndex === -1;
 
-    if (nextVisibleIndex === -1 && currentFieldIsValid) {
+    if (isLastField) {
+      // Last field — always show submit, never show next.
+      // Disable submit until the field is valid.
       this.submitButton.style.display = "inline-block";
+      this.submitButton.disabled = !currentFieldIsValid;
       this.nextButton.style.display = "none";
     } else {
       this.submitButton.style.display = "none";
