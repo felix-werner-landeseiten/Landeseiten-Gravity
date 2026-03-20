@@ -614,9 +614,6 @@ class LandeseitenForm {
       return;
     }
 
-    // Signal to CSS that JS is in control of field visibility
-    this.formElement.classList.add("js-initialized");
-
     this.formElement.dataset.mode = this.config.mode;
     this.nextButton.textContent = this.config.buttonText.next;
     this.previousButton.textContent = this.config.buttonText.previous;

@@ -126,9 +126,8 @@
 /* --- 4. Field Visibility & States --- */
 /* ==================================== */
 
-/* Fields are hidden ONLY after JS has initialized the form.
-   Before JS runs, the first field stays visible as a fallback. */
-.gform_wrapper.cs-landeseiten-form.js-initialized .gfield:not(.active) {
+/* Non-active fields are hidden but remain in flow for screen readers */
+.gform_wrapper.cs-landeseiten-form .gfield:not(.active) {
   opacity: 0;
   visibility: hidden;
   position: absolute;
@@ -142,13 +141,7 @@
   transition: none;
 }
 
-/* Before JS: hide all fields except the first visible one */
-.gform_wrapper.cs-landeseiten-form:not(.js-initialized) .gfield:not(:first-of-type) {
-  display: none;
-}
-
 .gform_wrapper.cs-landeseiten-form .gfield.active {
-  display: block;
   opacity: 1;
   visibility: visible;
   position: relative;
