@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.1.3
+ * Version:       2.1.2
  */
 
 // -----------------------------------------------------------------------------
@@ -834,15 +834,12 @@ class LandeseitenForm {
     const prevVisibleIndex = this.#findPrevVisibleIndex(this.currentFieldIndex);
     const isLastField = nextVisibleIndex === -1;
 
-    if (isLastField && currentFieldIsValid) {
-      // Last field is valid — show submit, hide next
+    if (isLastField) {
+      // Last field — always show submit, never show next.
+      // Disable submit until the field is valid.
       this.submitButton.style.display = "inline-block";
+      this.submitButton.disabled = !currentFieldIsValid;
       this.nextButton.style.display = "none";
-    } else if (isLastField) {
-      // Last field but not yet valid — keep next visible (disabled) so
-      // the user sees a button; submit stays hidden until valid.
-      this.submitButton.style.display = "none";
-      this.nextButton.style.display = "inline-block";
     } else {
       this.submitButton.style.display = "none";
       this.nextButton.style.display = "inline-block";
