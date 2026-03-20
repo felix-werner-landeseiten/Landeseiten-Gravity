@@ -148,6 +148,7 @@
 }
 
 .gform_wrapper.cs-landeseiten-form .gfield.active {
+  display: block;
   opacity: 1;
   visibility: visible;
   position: relative;
