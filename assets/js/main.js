@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.1.4
+ * Version:       2.1.5
  */
 
 // -----------------------------------------------------------------------------
@@ -680,6 +680,19 @@ class LandeseitenForm {
       field.show(index === this.currentFieldIndex);
     });
 
+    // Hook into Gravity Forms conditional logic
+    // This ensures buttons update if GF suddenly shows/hides the last field
+    if (typeof jQuery !== "undefined") {
+      jQuery(document).on("gform_post_conditional_logic", (event, formId, fields, isInit) => {
+        // Only trigger if this instance belongs to the triggered form
+        const instanceFormId = this.formElement.getAttribute("data-form-id") || this.formElement.id.replace(/\D/g, "");
+        if (formId == instanceFormId) {
+          this.#updateButtonVisibility();
+          this.#updateProgressBar();
+        }
+      });
+    }
+
     // Set initial focus
     if (
       this.config.autoFocus &&
@@ -705,7 +718,16 @@ class LandeseitenForm {
     if (!field || !field.wrapper) return false;
     // Only check display:none (used by GF conditional logic).
     // Do NOT check visibility — our own CSS uses visibility:hidden for non-active fields.
-    return window.getComputedStyle(field.wrapper).display !== "none";
+    const computed = window.getComputedStyle(field.wrapper);
+    if (computed.display === "none") return false;
+    
+    // Fallback: If visibility relies on inline styles and is actively being hidden by jQuery
+    if (field.wrapper.style.display === "none") return false;
+
+    // Reject fields that Gravity Forms marks with hidden utility classes but somehow slipped through
+    if (field.wrapper.classList.contains("gfield_visibility_hidden")) return false;
+
+    return true;
   }
 
   #findNextVisibleIndex(startIndex) {
@@ -725,14 +747,17 @@ class LandeseitenForm {
   #onRadioSelect() {
     setTimeout(() => {
       if (!this.isAnimating) {
-        // Re-validate field state before checking if we can advance,
-        // prevents race conditions when radios fire rapidly.
+        // Re-validate field state before checking if we can advance.
+        // Also gives GF conditional logic time to finish animating.
         this.#onFieldChange();
         if (!this.nextButton.disabled) {
-          this.#onNextButtonClick();
+          const nextIndex = this.#findNextVisibleIndex(this.currentFieldIndex);
+          if (nextIndex !== -1) {
+            this.#onNextButtonClick();
+          }
         }
       }
-    }, 150);
+    }, 250);
   }
 
   #onEnterPressed() {
@@ -782,13 +807,11 @@ class LandeseitenForm {
       }
       newField.show(true);
 
-      // Defer scroll by one animation frame so the browser has recalculated
-      // layout after the new field's CSS class has been applied.
-      // Reading getBoundingClientRect() synchronously gives stale values
-      // (e.g. 0) and causes the page to jump to the top.
-      requestAnimationFrame(() => {
+      // Defer scroll to ensure the browser has fully recalculated layout 
+      // after the new field's CSS class 'active' has been applied.
+      setTimeout(() => {
         scrollToShowField();
-      });
+      }, 50);
 
       if (this.config.autoFocus) {
         setTimeout(() => {
