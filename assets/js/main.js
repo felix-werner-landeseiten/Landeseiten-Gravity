@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.1.5
+ * Version:       2.2.0
  */
 
 // -----------------------------------------------------------------------------
@@ -461,10 +461,11 @@ class GravityFieldsProvider extends FieldsProvider {
   }
 
   #resolveSingle(wrapper, config) {
-    // Skip hidden, utility, section, and page-break fields.
-    // Use getComputedStyle to catch fields hidden via CSS classes, not just inline styles.
+    // Skip hidden or utility fields. Use inline style check (not getComputedStyle)
+    // so that deferred/cached CSS does not incorrectly exclude fields at init time.
+    // Section and page-break fields are always excluded regardless.
     if (
-      window.getComputedStyle(wrapper).display === "none" ||
+      wrapper.style.display === "none" ||
       wrapper.classList.contains("gform_validation_container") ||
       wrapper.classList.contains("gfield_visibility_hidden") ||
       wrapper.classList.contains("lf-skip") ||
@@ -687,7 +688,9 @@ class LandeseitenForm {
         // Only trigger if this instance belongs to the triggered form
         const instanceFormId = this.formElement.getAttribute("data-form-id") || this.formElement.id.replace(/\D/g, "");
         if (formId == instanceFormId) {
-          this.#updateButtonVisibility();
+          // Re-validate the current field so nextButton.disabled is fresh
+          // before computing button/submit visibility from the new field layout.
+          this.#onFieldChange();
           this.#updateProgressBar();
         }
       });
@@ -716,18 +719,7 @@ class LandeseitenForm {
 
   #isFieldVisible(field) {
     if (!field || !field.wrapper) return false;
-    // Only check display:none (used by GF conditional logic).
-    // Do NOT check visibility — our own CSS uses visibility:hidden for non-active fields.
-    const computed = window.getComputedStyle(field.wrapper);
-    if (computed.display === "none") return false;
-    
-    // Fallback: If visibility relies on inline styles and is actively being hidden by jQuery
-    if (field.wrapper.style.display === "none") return false;
-
-    // Reject fields that Gravity Forms marks with hidden utility classes but somehow slipped through
-    if (field.wrapper.classList.contains("gfield_visibility_hidden")) return false;
-
-    return true;
+    return window.getComputedStyle(field.wrapper).display !== "none";
   }
 
   #findNextVisibleIndex(startIndex) {
@@ -746,18 +738,10 @@ class LandeseitenForm {
 
   #onRadioSelect() {
     setTimeout(() => {
-      if (!this.isAnimating) {
-        // Re-validate field state before checking if we can advance.
-        // Also gives GF conditional logic time to finish animating.
-        this.#onFieldChange();
-        if (!this.nextButton.disabled) {
-          const nextIndex = this.#findNextVisibleIndex(this.currentFieldIndex);
-          if (nextIndex !== -1) {
-            this.#onNextButtonClick();
-          }
-        }
+      if (!this.isAnimating && !this.nextButton.disabled) {
+        this.#onNextButtonClick();
       }
-    }, 250);
+    }, 150);
   }
 
   #onEnterPressed() {
@@ -789,15 +773,20 @@ class LandeseitenForm {
     const newField = this.fields[newIndex];
 
     const scrollToShowField = () => {
-      // Always scroll to the new field's position (absolute top).
-      // Using the new field ensures we scroll downward on auto-progress,
-      // even if the old field is far above the viewport.
-      const fieldTop =
-        newField.wrapper.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({
-        top: fieldTop - this.config.scrollTopMargin,
-        behavior: "smooth",
-      });
+      if (this.config.mode === "reveal" && isForward) {
+        const oldFieldRect = oldField.wrapper.getBoundingClientRect();
+        window.scrollBy({
+          top: oldFieldRect.bottom - this.config.scrollTopMargin,
+          behavior: "smooth",
+        });
+      } else {
+        const fieldTop =
+          newField.wrapper.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({
+          top: fieldTop - this.config.scrollTopMargin,
+          behavior: "smooth",
+        });
+      }
     };
 
     const completeTransition = () => {
@@ -806,12 +795,7 @@ class LandeseitenForm {
         oldField.show(false);
       }
       newField.show(true);
-
-      // Defer scroll to ensure the browser has fully recalculated layout 
-      // after the new field's CSS class 'active' has been applied.
-      setTimeout(() => {
-        scrollToShowField();
-      }, 50);
+      scrollToShowField();
 
       if (this.config.autoFocus) {
         setTimeout(() => {
@@ -857,13 +841,9 @@ class LandeseitenForm {
       !this.nextButton.disabled;
     const nextVisibleIndex = this.#findNextVisibleIndex(this.currentFieldIndex);
     const prevVisibleIndex = this.#findPrevVisibleIndex(this.currentFieldIndex);
-    const isLastField = nextVisibleIndex === -1;
 
-    if (isLastField) {
-      // Last field — always show submit, never show next.
-      // Disable submit until the field is valid.
+    if (nextVisibleIndex === -1 && currentFieldIsValid) {
       this.submitButton.style.display = "inline-block";
-      this.submitButton.disabled = !currentFieldIsValid;
       this.nextButton.style.display = "none";
     } else {
       this.submitButton.style.display = "none";

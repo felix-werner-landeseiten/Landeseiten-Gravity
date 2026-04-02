@@ -5,7 +5,7 @@
  * Single source of truth for default configuration values.
  * Handles AJAX re-initialization after Gravity Forms AJAX submissions.
  * Author:        Landeseiten.de
- * Version:       2.0.2
+ * Version:       2.2.0
  */
 
 /**
@@ -95,7 +95,13 @@ function lfInitAll() {
 }
 
 // --- Boot on DOMContentLoaded ---
-document.addEventListener("DOMContentLoaded", lfInitAll);
+// Guard for deferred/delayed script loading (e.g. WP Rocket):
+// if the DOM is already ready by the time this script runs, call directly.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", lfInitAll);
+} else {
+  lfInitAll();
+}
 
 // --- Re-initialize after Gravity Forms AJAX submissions ---
 // GF triggers gform_post_render after AJAX form submission or page change.
