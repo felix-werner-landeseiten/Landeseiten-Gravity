@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.2.1
+ * Version:       2.2.2
  */
 
 // -----------------------------------------------------------------------------
@@ -719,7 +719,13 @@ class LandeseitenForm {
 
   #isFieldVisible(field) {
     if (!field || !field.wrapper) return false;
-    return window.getComputedStyle(field.wrapper).display !== "none";
+    // A field is hidden only when Gravity Forms conditional logic hides it —
+    // either via inline display:none or the gfield_visibility_hidden class.
+    // Reveal-mode CSS hides inactive fields with position:absolute;height:0,
+    // which does NOT set display:none, so those still count as visible steps.
+    if (field.wrapper.style.display === "none") return false;
+    if (field.wrapper.classList.contains("gfield_visibility_hidden")) return false;
+    return true;
   }
 
   #findNextVisibleIndex(startIndex) {
