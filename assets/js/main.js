@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.2.5
+ * Version:       2.2.6
  */
 
 // -----------------------------------------------------------------------------
@@ -468,6 +468,7 @@ class GravityFieldsProvider extends FieldsProvider {
       wrapper.style.display === "none" ||
       wrapper.classList.contains("gform_validation_container") ||
       wrapper.classList.contains("gfield_visibility_hidden") ||
+      wrapper.classList.contains("gfield--type-honeypot") ||
       wrapper.classList.contains("lf-skip") ||
       wrapper.classList.contains("gsection") ||
       wrapper.classList.contains("gfield--type-section") ||
@@ -719,12 +720,14 @@ class LandeseitenForm {
 
   #isFieldVisible(field) {
     if (!field || !field.wrapper) return false;
-    // A field is hidden only when Gravity Forms conditional logic hides it —
-    // either via inline display:none or the gfield_visibility_hidden class.
-    // Reveal-mode CSS hides inactive fields with position:absolute;height:0,
-    // which does NOT set display:none, so those still count as visible steps.
+    // Inline style check (GF conditional logic sets display:none directly)
     if (field.wrapper.style.display === "none") return false;
+    // Class check (GF always-hidden fields use this class)
     if (field.wrapper.classList.contains("gfield_visibility_hidden")) return false;
+    // Computed style fallback (catches fields hidden by CSS rules, e.g. honeypot).
+    // Safe in reveal mode: inactive fields use position:absolute/visibility:hidden,
+    // NOT display:none, so getComputedStyle().display is always "block" for them.
+    if (window.getComputedStyle(field.wrapper).display === "none") return false;
     return true;
   }
 
@@ -779,20 +782,8 @@ class LandeseitenForm {
     const newField = this.fields[newIndex];
 
     const scrollToShowField = () => {
-      if (this.config.mode === "reveal" && isForward) {
-        const oldFieldRect = oldField.wrapper.getBoundingClientRect();
-        window.scrollBy({
-          top: oldFieldRect.bottom - this.config.scrollTopMargin,
-          behavior: "smooth",
-        });
-      } else {
-        const fieldTop =
-          newField.wrapper.getBoundingClientRect().top + window.scrollY;
-        window.scrollTo({
-          top: fieldTop - this.config.scrollTopMargin,
-          behavior: "smooth",
-        });
-      }
+      newField.wrapper.style.scrollMarginTop = this.config.scrollTopMargin + "px";
+      newField.wrapper.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
     const completeTransition = () => {
@@ -841,14 +832,13 @@ class LandeseitenForm {
   }
 
   #updateButtonVisibility() {
-    const currentFieldIsValid =
-      this.fields.length > 0 &&
-      this.fields[this.currentFieldIndex] &&
-      !this.nextButton.disabled;
     const nextVisibleIndex = this.#findNextVisibleIndex(this.currentFieldIndex);
     const prevVisibleIndex = this.#findPrevVisibleIndex(this.currentFieldIndex);
 
-    if (nextVisibleIndex === -1 && currentFieldIsValid) {
+    // Show submit on the last visible field regardless of validity —
+    // GF handles its own submission validation. Showing Weiter on the last
+    // field confuses users who have already filled it in.
+    if (nextVisibleIndex === -1) {
       this.submitButton.style.display = "inline-block";
       this.nextButton.style.display = "none";
     } else {
