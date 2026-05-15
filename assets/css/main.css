@@ -426,7 +426,8 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
 .gform_wrapper.cs-landeseiten-form .gform_button,
 .gform_wrapper.cs-landeseiten-form input[type="submit"].gform_button,
 .gform_wrapper.cs-landeseiten-form .button-next,
-.gform_wrapper.cs-landeseiten-form .button-previous {
+.gform_wrapper.cs-landeseiten-form .button-previous,
+.gform_wrapper.cs-landeseiten-form .button-submit {
   min-width: max-content !important;
   background: var(--landeseiten-form-accent-color) !important;
   border: 1px solid var(--landeseiten-form-accent-color) !important;
@@ -443,14 +444,16 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
 .gform_wrapper.cs-landeseiten-form .gform_button:hover,
 .gform_wrapper.cs-landeseiten-form input[type="submit"].gform_button:hover,
 .gform_wrapper.cs-landeseiten-form .button-next:hover,
-.gform_wrapper.cs-landeseiten-form .button-previous:hover {
+.gform_wrapper.cs-landeseiten-form .button-previous:hover,
+.gform_wrapper.cs-landeseiten-form .button-submit:hover {
   background-color: var(--landeseiten-form-accent-color);
   filter: brightness(var(--landeseiten-form-hover-brightness));
 }
 
 .gform_wrapper.cs-landeseiten-form .gform_button:disabled,
 .gform_wrapper.cs-landeseiten-form input[type="submit"].gform_button:disabled,
-.gform_wrapper.cs-landeseiten-form .button-next:disabled {
+.gform_wrapper.cs-landeseiten-form .button-next:disabled,
+.gform_wrapper.cs-landeseiten-form .button-submit:disabled {
   background: var(--landeseiten-form-disabled-bg) !important;
   border-color: var(--landeseiten-form-disabled-bg) !important;
   color: var(--landeseiten-form-disabled-color) !important;

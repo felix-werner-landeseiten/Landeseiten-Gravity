@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.2.8
+ * Version:       2.2.9
  */
 
 // -----------------------------------------------------------------------------
@@ -553,6 +553,8 @@ class GravityFormControlsProvider extends ControlsProvider {
     if (!container || !submitButton) {
       return { nextButton: null, previousButton: null, submitButton: null };
     }
+
+    submitButton.classList.add("button-submit");
 
     // Reuse existing custom buttons if already created (prevents duplicates on re-init)
     let nextButton = container.querySelector(".button-next");
