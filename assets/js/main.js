@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.2.3
+ * Version:       2.2.4
  */
 
 // -----------------------------------------------------------------------------
@@ -778,14 +778,13 @@ class LandeseitenForm {
     const oldField = this.fields[oldIndex];
     const newField = this.fields[newIndex];
 
-    const scrollToShowField = () => {
-      const fieldTop =
-        newField.wrapper.getBoundingClientRect().top + window.scrollY;
-      window.scrollTo({
-        top: fieldTop - this.config.scrollTopMargin,
-        behavior: "smooth",
-      });
-    };
+    // IMPORTANT: Capture the old field's absolute document position NOW,
+    // while it is still in normal flow (position:relative, active class).
+    // After the transition, the new field switches from position:absolute;
+    // inset:0 to position:relative — getBoundingClientRect() on the NEW
+    // field is unreliable for several frames after that CSS change.
+    const oldFieldBottomAbsolute =
+      oldField.wrapper.getBoundingClientRect().bottom + window.scrollY;
 
     const completeTransition = () => {
       oldField.wrapper.classList.remove("animating-out");
@@ -794,24 +793,44 @@ class LandeseitenForm {
       }
       newField.show(true);
 
-      // Defer scroll by one animation frame so the browser has recalculated
-      // layout after the new field's CSS class has been applied.
-      // Reading getBoundingClientRect() synchronously gives stale values
-      // (e.g. 0) and causes the page to jump to the top.
+      // Scroll after a double-rAF so the browser has flushed layout.
       requestAnimationFrame(() => {
-        scrollToShowField();
+        requestAnimationFrame(() => {
+          if (this.config.mode === "reveal" && isForward) {
+            // In reveal mode going forward, the new field appears right
+            // below the old field. We already captured the old field's
+            // absolute bottom before any class changes, so this value
+            // is trustworthy regardless of layout recalc timing.
+            window.scrollTo({
+              top: oldFieldBottomAbsolute - this.config.scrollTopMargin,
+              behavior: "smooth",
+            });
+          } else {
+            // Paged mode or going backwards: the old field has been hidden
+            // and the new field is the only one visible. Its position
+            // should be reliable after two rAFs.
+            const fieldTop =
+              newField.wrapper.getBoundingClientRect().top + window.scrollY;
+            window.scrollTo({
+              top: fieldTop - this.config.scrollTopMargin,
+              behavior: "smooth",
+            });
+          }
+
+          // Clear the animation lock after scroll target is set
+          this.isAnimating = false;
+        });
       });
 
       if (this.config.autoFocus) {
         setTimeout(() => {
           newField.focus();
-        }, 300);
+        }, 400);
       }
 
       this.currentFieldIndex = newIndex;
       this.#onFieldChange();
       this.#updateProgressBar();
-      this.isAnimating = false;
     };
 
     if (this.config.mode === "paged") {
