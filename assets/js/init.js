@@ -5,7 +5,7 @@
  * Single source of truth for default configuration values.
  * Handles AJAX re-initialization after Gravity Forms AJAX submissions.
  * Author:        Landeseiten.de
- * Version:       2.2.4
+ * Version:       2.2.5
  */
 
 /**
@@ -13,7 +13,7 @@
  * PHP settings from wp_localize_script override these per-form.
  */
 const LF_DEFAULT_CONFIG = {
-  scrollTopMargin: 150,
+  scrollTopMargin: 40,
   mode: "reveal",
   autoFocus: true,
   enterToAdvance: true,
