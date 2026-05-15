@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.2.6
+ * Version:       2.2.7
  */
 
 // -----------------------------------------------------------------------------
@@ -782,8 +782,14 @@ class LandeseitenForm {
     const newField = this.fields[newIndex];
 
     const scrollToShowField = () => {
-      newField.wrapper.style.scrollMarginTop = this.config.scrollTopMargin + "px";
-      newField.wrapper.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Defer one frame so the browser reflows phone from position:absolute
+      // (anchored to form top) to position:relative (below previous fields)
+      // before computing the scroll target. Without rAF, scrollIntoView sees
+      // the pre-reflow position and scrolls up to the form wrapper top.
+      requestAnimationFrame(() => {
+        newField.wrapper.style.scrollMarginTop = this.config.scrollTopMargin + "px";
+        newField.wrapper.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     };
 
     const completeTransition = () => {

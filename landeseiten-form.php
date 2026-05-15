@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Landeseiten Form for Gravity Forms
  * Description:       A premium wrapper for Gravity Forms to create multi-step, animated user experiences with modern styling.
- * Version:           2.2.6
+ * Version:           2.2.7
  * Author:            Landeseiten.de
  * Author URI:        https://landeseiten.de
  * License:           GPLv2 or later
@@ -26,7 +26,7 @@ if ( ! defined( 'WPINC' ) ) {
  */
 define( 'LF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'LF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'LF_VERSION', '2.2.6' );
+define( 'LF_VERSION', '2.2.7' );
 
 /**
  * Load core plugin files.
@@ -64,5 +64,11 @@ if ( file_exists( LF_PLUGIN_DIR . 'vendor/plugin-update-checker/plugin-update-ch
         // Use GitHub Releases (tagged versions) instead of branch tracking.
         // Only proper releases (not pre-releases) trigger auto-updates.
         $myUpdateChecker->getVcsApi()->enableReleaseAssets();
+
+        // Optional: define LF_GITHUB_TOKEN in wp-config.php to avoid GitHub
+        // API rate limit (60 req/hour unauthenticated vs 5000 with a token).
+        if ( defined( 'LF_GITHUB_TOKEN' ) && LF_GITHUB_TOKEN ) {
+            $myUpdateChecker->setAuthentication( LF_GITHUB_TOKEN );
+        }
     }
 }
