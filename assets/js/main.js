@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.2.2
+ * Version:       2.2.3
  */
 
 // -----------------------------------------------------------------------------
@@ -559,7 +559,7 @@ class GravityFormControlsProvider extends ControlsProvider {
 
     if (!nextButton) {
       nextButton = document.createElement("button");
-      nextButton.className = "gform_button button button-next";
+      nextButton.className = "button button-next";
       nextButton.type = "button";
       nextButton.disabled = true;
       container.insertBefore(nextButton, submitButton);
@@ -567,7 +567,7 @@ class GravityFormControlsProvider extends ControlsProvider {
 
     if (!previousButton) {
       previousButton = document.createElement("button");
-      previousButton.className = "gform_button button button-previous";
+      previousButton.className = "button button-previous";
       previousButton.type = "button";
       container.insertBefore(previousButton, nextButton);
     }
@@ -779,20 +779,12 @@ class LandeseitenForm {
     const newField = this.fields[newIndex];
 
     const scrollToShowField = () => {
-      if (this.config.mode === "reveal" && isForward) {
-        const oldFieldRect = oldField.wrapper.getBoundingClientRect();
-        window.scrollBy({
-          top: oldFieldRect.bottom - this.config.scrollTopMargin,
-          behavior: "smooth",
-        });
-      } else {
-        const fieldTop =
-          newField.wrapper.getBoundingClientRect().top + window.scrollY;
-        window.scrollTo({
-          top: fieldTop - this.config.scrollTopMargin,
-          behavior: "smooth",
-        });
-      }
+      const fieldTop =
+        newField.wrapper.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo({
+        top: fieldTop - this.config.scrollTopMargin,
+        behavior: "smooth",
+      });
     };
 
     const completeTransition = () => {

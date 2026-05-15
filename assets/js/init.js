@@ -5,7 +5,7 @@
  * Single source of truth for default configuration values.
  * Handles AJAX re-initialization after Gravity Forms AJAX submissions.
  * Author:        Landeseiten.de
- * Version:       2.2.2
+ * Version:       2.2.3
  */
 
 /**
