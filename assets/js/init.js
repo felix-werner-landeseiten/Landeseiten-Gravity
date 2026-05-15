@@ -5,7 +5,7 @@
  * Single source of truth for default configuration values.
  * Handles AJAX re-initialization after Gravity Forms AJAX submissions.
  * Author:        Landeseiten.de
- * Version:       2.2.7
+ * Version:       2.2.8
  */
 
 /**
@@ -45,10 +45,13 @@ const _lfInitializedForms = new WeakSet();
  * @param {HTMLElement} formElement - The .landeseiten-form-active wrapper.
  */
 function lfInitForm(formElement) {
-  // Prevent double-initialization
-  if (_lfInitializedForms.has(formElement)) {
-    return;
-  }
+  // DOM-based guard prevents double-init even when multiple JS files
+  // (e.g. plugin + child theme) each call lfInitForm — WeakSet alone
+  // only protects within a single script's scope.
+  if (formElement.dataset.lfInitialized === "true") return;
+  formElement.dataset.lfInitialized = "true";
+
+  if (_lfInitializedForms.has(formElement)) return;
 
   try {
     const formId = formElement.getAttribute("data-form-id") || "";
@@ -81,6 +84,7 @@ function lfInitForm(formElement) {
     form.init();
     _lfInitializedForms.add(formElement);
   } catch (error) {
+    formElement.removeAttribute("data-lf-initialized");
     console.error("Landeseiten Form Initialization Error:", error);
   }
 }

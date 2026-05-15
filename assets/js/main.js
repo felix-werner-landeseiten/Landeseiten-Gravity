@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.2.7
+ * Version:       2.2.8
  */
 
 // -----------------------------------------------------------------------------
@@ -782,11 +782,16 @@ class LandeseitenForm {
     const newField = this.fields[newIndex];
 
     const scrollToShowField = () => {
-      // Defer one frame so the browser reflows phone from position:absolute
-      // (anchored to form top) to position:relative (below previous fields)
-      // before computing the scroll target. Without rAF, scrollIntoView sees
-      // the pre-reflow position and scrolls up to the form wrapper top.
       requestAnimationFrame(() => {
+        const rect = newField.wrapper.getBoundingClientRect();
+        const absoluteTop = rect.top + window.scrollY;
+        const targetScroll = absoluteTop - this.config.scrollTopMargin;
+        // In reveal mode going forward, never scroll UP — the new field must
+        // always be below the current position. If targetScroll < scrollY it
+        // means a stale/duplicate instance is pointing at the wrong field.
+        if (this.config.mode === "reveal" && isForward && targetScroll <= window.scrollY) {
+          return;
+        }
         newField.wrapper.style.scrollMarginTop = this.config.scrollTopMargin + "px";
         newField.wrapper.scrollIntoView({ behavior: "smooth", block: "start" });
       });
