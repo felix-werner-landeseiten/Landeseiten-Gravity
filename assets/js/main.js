@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.3.0
+ * Version:       2.3.1
  */
 
 // -----------------------------------------------------------------------------
@@ -548,7 +548,11 @@ class GravityFormControlsProvider extends ControlsProvider {
 
   provide(config) {
     const container = this.form.querySelector(".gform-footer") || this.form.querySelector(".gform_footer");
-    const submitButton = container?.querySelector("input[type='submit']");
+    // GF 3.0 renders <button type="submit">; GF 2.x rendered <input type="submit">.
+    // Match both so the form initializes on either version.
+    const submitButton = container?.querySelector(
+      "input[type='submit'], button[type='submit']"
+    );
 
     if (!container || !submitButton) {
       return { nextButton: null, previousButton: null, submitButton: null };
@@ -625,7 +629,12 @@ class LandeseitenForm {
 
     // Apply custom submit button text if provided
     if (this.config.buttonText.submit) {
-      this.submitButton.value = this.config.buttonText.submit;
+      // <input> carries its label in .value, <button> in .textContent
+      if (this.submitButton.tagName === "BUTTON") {
+        this.submitButton.textContent = this.config.buttonText.submit;
+      } else {
+        this.submitButton.value = this.config.buttonText.submit;
+      }
     }
 
     // Initialize Progress Bar if enabled
