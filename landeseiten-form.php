@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Landeseiten Form for Gravity Forms
  * Description:       A premium wrapper for Gravity Forms to create multi-step, animated user experiences with modern styling.
- * Version:           2.3.3
+ * Version:           2.3.4
  * Author:            Landeseiten.de
  * Author URI:        https://landeseiten.de
  * License:           GPLv2 or later
@@ -26,7 +26,7 @@ if ( ! defined( 'WPINC' ) ) {
  */
 define( 'LF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'LF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'LF_VERSION', '2.3.3' );
+define( 'LF_VERSION', '2.3.4' );
 
 /**
  * Load core plugin files.
@@ -37,6 +37,56 @@ define( 'LF_VERSION', '2.3.3' );
  * - meta-boxes.php: Handles the backend UI for settings.
  * - gravity-forms-hooks.php: Connects settings to Gravity Forms output.
  */
+/**
+ * Default frontend validation messages.
+ *
+ * Kept in one place so the admin UI, the frontend config and the JS
+ * defaults (assets/js/init.js) stay in sync.
+ *
+ * @since 2.3.4
+ * @return array<string,string> meta_key => default message
+ */
+function lf_error_message_defaults() {
+	return [
+		'_lf_error_required' => 'Dieses Feld ist ein Pflichtfeld.',
+		'_lf_error_email'    => 'Die E-Mail-Adresse ist ungültig.',
+		'_lf_error_phone'    => 'Die Telefonnummer ist ungültig.',
+		'_lf_error_url'      => 'Bitte geben Sie eine gültige Web-Adresse ein.',
+		'_lf_error_consent'  => 'Bitte stimmen Sie den Bedingungen zu.',
+	];
+}
+
+/**
+ * Returns the saved error message for a config post, or '' when the site
+ * still uses a default.
+ *
+ * The admin form pre-fills each message with the current default and saves it
+ * verbatim, so existing configs carry the old wording as if it were custom.
+ * Values that match any previous default are treated as "not customised" so a
+ * change of defaults reaches existing forms without a migration.
+ *
+ * @since 2.3.4
+ */
+function lf_get_custom_error_message( $post_id, $meta_key ) {
+	$value = (string) get_post_meta( $post_id, $meta_key, true );
+	if ( $value === '' ) {
+		return '';
+	}
+
+	$legacy = [
+		'_lf_error_required' => [ 'Dieses Feld ist erforderlich.' ],
+		'_lf_error_email'    => [ 'Bitte geben Sie eine gültige E-Mail-Adresse ein.' ],
+		'_lf_error_phone'    => [ 'Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.' ],
+	];
+	$defaults = lf_error_message_defaults();
+	$known    = isset( $legacy[ $meta_key ] ) ? $legacy[ $meta_key ] : [];
+	if ( isset( $defaults[ $meta_key ] ) ) {
+		$known[] = $defaults[ $meta_key ];
+	}
+
+	return in_array( $value, $known, true ) ? '' : $value;
+}
+
 require_once LF_PLUGIN_DIR . 'includes/enqueue-scripts.php';
 require_once LF_PLUGIN_DIR . 'includes/post-type.php';
 require_once LF_PLUGIN_DIR . 'includes/meta-boxes.php';

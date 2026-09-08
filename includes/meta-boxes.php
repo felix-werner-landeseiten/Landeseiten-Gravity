@@ -89,11 +89,12 @@ function lf_render_settings_meta_box( $post ) {
 	$saved_secondary_btn_border = get_post_meta( $post->ID, '_lf_secondary_btn_border', true );
 
 	// --- 5. Retrieve Error Messages ---
-	$saved_error_req     = get_post_meta( $post->ID, '_lf_error_required', true );
-	$saved_error_email   = get_post_meta( $post->ID, '_lf_error_email', true );
-	$saved_error_phone   = get_post_meta( $post->ID, '_lf_error_phone', true );
-	$saved_error_url     = get_post_meta( $post->ID, '_lf_error_url', true );
-	$saved_error_consent = get_post_meta( $post->ID, '_lf_error_consent', true );
+	$error_defaults      = lf_error_message_defaults();
+	$saved_error_req     = lf_get_custom_error_message( $post->ID, '_lf_error_required' );
+	$saved_error_email   = lf_get_custom_error_message( $post->ID, '_lf_error_email' );
+	$saved_error_phone   = lf_get_custom_error_message( $post->ID, '_lf_error_phone' );
+	$saved_error_url     = lf_get_custom_error_message( $post->ID, '_lf_error_url' );
+	$saved_error_consent = lf_get_custom_error_message( $post->ID, '_lf_error_consent' );
 
 	?>
 	<style>
@@ -367,23 +368,23 @@ function lf_render_settings_meta_box( $post ) {
 				<div class="lf-grid">
 					<div class="lf-field lf-grid-full">
 						<label><?php esc_html_e( 'Required Field', 'landeseiten-form' ); ?></label>
-						<input type="text" name="lf_error_required" value="<?php echo esc_attr( $saved_error_req ?: 'Dieses Feld ist erforderlich.' ); ?>" />
+						<input type="text" name="lf_error_required" value="<?php echo esc_attr( $saved_error_req ?: $error_defaults['_lf_error_required'] ); ?>" />
 					</div>
 					<div class="lf-field lf-grid-full">
 						<label><?php esc_html_e( 'Invalid Email', 'landeseiten-form' ); ?></label>
-						<input type="text" name="lf_error_email" value="<?php echo esc_attr( $saved_error_email ?: 'Bitte geben Sie eine gültige E-Mail-Adresse ein.' ); ?>" />
+						<input type="text" name="lf_error_email" value="<?php echo esc_attr( $saved_error_email ?: $error_defaults['_lf_error_email'] ); ?>" />
 					</div>
 					<div class="lf-field lf-grid-full">
 						<label><?php esc_html_e( 'Invalid Phone', 'landeseiten-form' ); ?></label>
-						<input type="text" name="lf_error_phone" value="<?php echo esc_attr( $saved_error_phone ?: 'Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.' ); ?>" />
+						<input type="text" name="lf_error_phone" value="<?php echo esc_attr( $saved_error_phone ?: $error_defaults['_lf_error_phone'] ); ?>" />
 					</div>
 					<div class="lf-field lf-grid-full">
 						<label><?php esc_html_e( 'Invalid URL', 'landeseiten-form' ); ?></label>
-						<input type="text" name="lf_error_url" value="<?php echo esc_attr( $saved_error_url ?: 'Bitte geben Sie eine gültige Web-Adresse ein.' ); ?>" />
+						<input type="text" name="lf_error_url" value="<?php echo esc_attr( $saved_error_url ?: $error_defaults['_lf_error_url'] ); ?>" />
 					</div>
 					<div class="lf-field lf-grid-full">
 						<label><?php esc_html_e( 'Consent Required', 'landeseiten-form' ); ?></label>
-						<input type="text" name="lf_error_consent" value="<?php echo esc_attr( $saved_error_consent ?: 'Bitte stimmen Sie den Bedingungen zu.' ); ?>" />
+						<input type="text" name="lf_error_consent" value="<?php echo esc_attr( $saved_error_consent ?: $error_defaults['_lf_error_consent'] ); ?>" />
 					</div>
 				</div>
 			</div>

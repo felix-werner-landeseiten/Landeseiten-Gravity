@@ -26,9 +26,9 @@ const LF_DEFAULT_CONFIG = {
     submit: "Absenden",
   },
   errorMessages: {
-    required: "Dieses Feld ist erforderlich.",
-    email: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
-    phone: "Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.",
+    required: "Dieses Feld ist ein Pflichtfeld.",
+    email: "Die E-Mail-Adresse ist ungültig.",
+    phone: "Die Telefonnummer ist ungültig.",
     url: "Bitte geben Sie eine gültige Web-Adresse ein.",
     consent: "Bitte stimmen Sie den Bedingungen zu.",
   },

@@ -226,10 +226,10 @@ function lf_apply_form_settings( $form ) {
 		}
 
 		// Error Messages
-		$error_req   = get_post_meta( $config_post_id, '_lf_error_required', true );
-		$error_email = get_post_meta( $config_post_id, '_lf_error_email', true );
-		$error_phone = get_post_meta( $config_post_id, '_lf_error_phone', true );
-		$error_url   = get_post_meta( $config_post_id, '_lf_error_url', true );
+		$error_req   = lf_get_custom_error_message( $config_post_id, '_lf_error_required' );
+		$error_email = lf_get_custom_error_message( $config_post_id, '_lf_error_email' );
+		$error_phone = lf_get_custom_error_message( $config_post_id, '_lf_error_phone' );
+		$error_url   = lf_get_custom_error_message( $config_post_id, '_lf_error_url' );
 		
 		$settings_for_js['errorMessages'] = [];
 		if ( $error_req ) $settings_for_js['errorMessages']['required'] = $error_req;
@@ -238,7 +238,7 @@ function lf_apply_form_settings( $form ) {
 		if ( $error_url ) $settings_for_js['errorMessages']['url'] = $error_url;
 
 		// Consent error message
-		$error_consent = get_post_meta( $config_post_id, '_lf_error_consent', true );
+		$error_consent = lf_get_custom_error_message( $config_post_id, '_lf_error_consent' );
 		if ( $error_consent ) $settings_for_js['errorMessages']['consent'] = $error_consent;
 		
 		// Use per-form variable name to prevent clobbering on multi-form pages
