@@ -553,6 +553,10 @@ body .ui-datepicker {
   z-index: 0 !important;
   display: none !important;
 }
+/* GF 3.x native calendar toggle: Flatpickr opens on focus, so never show it */
+.gform_wrapper.cs-landeseiten-form .gform-datepicker-toggle {
+  display: none !important;
+}
 .flatpickr-calendar.open {
   z-index: 99999 !important;
 }

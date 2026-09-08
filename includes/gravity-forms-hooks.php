@@ -168,6 +168,10 @@ function lf_apply_form_settings( $form ) {
 		// Add custom wrapper class and data attributes
 		add_filter( 'gform_get_form_filter_' . $form_id, 'lf_add_wrapper_class_to_html', 10, 2 );
 
+		// GF 3.1+ attaches an IMask input mask (data-mask) and its own calendar toggle to
+		// datepicker fields. Both conflict with Flatpickr, so strip them at render time.
+		add_filter( 'gform_field_content_' . $form_id, 'lf_strip_gf_datepicker_extras', 10, 5 );
+
 		// --- 1. Prepare Date Picker Configs ---
 		$date_fields_config = [];
 		foreach ( $form['fields'] as $field ) {
@@ -358,6 +362,37 @@ function lf_add_wrapper_class_to_html( $form_string, $form ) {
 		$form_string,
 		1 // Limit: only first occurrence
 	);
+}
+
+/**
+ * Removes Gravity Forms 3.1+ datepicker extras that conflict with Flatpickr.
+ *
+ * GF 3.1 renders `data-mask="99.99.9999"` on datepicker inputs and initialises an
+ * IMask instance on it. IMask treats the value Flatpickr writes as an external
+ * change and resets the input to empty, so users can never pick a date.
+ * GF 3.x also renders its own calendar toggle <button>, which is dead weight once
+ * Flatpickr takes over (it opens on focus) and picks up the theme's button styling.
+ *
+ * Hooked to gform_field_content_{form_id} for configured Landeseiten forms only.
+ *
+ * @since 2.3.3
+ */
+function lf_strip_gf_datepicker_extras( $content, $field, $value, $lead_id, $form_id ) {
+	if ( ! is_object( $field ) || $field->type !== 'date' ) {
+		return $content;
+	}
+	// Only the single-input datepicker is replaced by Flatpickr; leave dropdown/field variants alone.
+	if ( ! empty( $field->dateType ) && $field->dateType !== 'datepicker' ) {
+		return $content;
+	}
+
+	// 1. Input mask attribute (single- or double-quoted).
+	$content = preg_replace( '/\s*data-mask=([\'"])[^\'"]*\1/', '', $content );
+
+	// 2. Native calendar toggle button.
+	$content = preg_replace( '/<button\b[^>]*\bgform-datepicker-toggle\b[^>]*>.*?<\/button>/s', '', $content );
+
+	return $content;
 }
 
 /* ---------------------------------------------------------------------------

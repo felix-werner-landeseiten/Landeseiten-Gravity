@@ -255,6 +255,15 @@ class InputField extends Field {
       if (typeof flatpickr !== "undefined") {
         // Cleanup legacy Gravity Forms classes
         this.input.classList.remove("datepicker", "gform-datepicker");
+        // GF 3.1+ attaches an IMask input mask via data-mask, which wipes values
+        // written by Flatpickr. The PHP filter strips it at render; this covers
+        // any markup that slipped through (e.g. third-party re-renders).
+        this.input.removeAttribute("data-mask");
+        // GF 3.x renders its own calendar toggle button; Flatpickr opens on focus.
+        const gfToggle = this.input.parentElement
+          ? this.input.parentElement.querySelector(".gform-datepicker-toggle")
+          : null;
+        if (gfToggle) gfToggle.remove();
         if (typeof jQuery !== "undefined") {
           try {
             jQuery(this.input).datepicker("destroy");
