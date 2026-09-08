@@ -373,7 +373,7 @@ function lf_add_wrapper_class_to_html( $form_string, $form ) {
 add_filter( 'gform_field_validation', 'lf_allow_date_ranges', 10, 4 );
 function lf_allow_date_ranges( $result, $value, $form, $field ) {
 	if ( $field->type === 'date' ) {
-		if ( strpos( $value, ' to ' ) !== false ) {
+		if ( is_string( $value ) && strpos( $value, ' to ' ) !== false ) {
 			$result['is_valid'] = true;
 			$result['message']  = '';
 		}
@@ -392,7 +392,7 @@ function lf_save_date_range_value( $value, $entry, $field, $form ) {
 	if ( $field->type === 'date' ) {
 		$input_name = 'input_' . $field->id;
 		// Check $_POST directly for the raw value
-		if ( isset( $_POST[ $input_name ] ) && strpos( $_POST[ $input_name ], ' to ' ) !== false ) {
+		if ( isset( $_POST[ $input_name ] ) && is_string( $_POST[ $input_name ] ) && strpos( $_POST[ $input_name ], ' to ' ) !== false ) {
 			return sanitize_text_field( $_POST[ $input_name ] );
 		}
 	}
@@ -409,7 +409,7 @@ add_filter( 'gform_entry_field_value', 'lf_display_date_range_value', 10, 4 );
 function lf_display_date_range_value( $value, $field, $entry, $form ) {
 	if ( $field->type === 'date' ) {
 		$stored_value = rgar( $entry, $field->id );
-		if ( strpos( $stored_value, ' to ' ) !== false ) {
+		if ( is_string( $stored_value ) && strpos( $stored_value, ' to ' ) !== false ) {
 			return $stored_value;
 		}
 	}
