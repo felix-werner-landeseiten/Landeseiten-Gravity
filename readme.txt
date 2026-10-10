@@ -55,6 +55,9 @@ Yes! In version 2.0.0, go to the "Content & Text" tab in your Landeseiten Form c
 
 == Changelog ==
 
+= 2.3.6 =
+* **FIX:** After a server-side validation error, the page now ends on the failed step (scrolled into view and focused) instead of staying at Gravity Forms' error summary, which GF focuses after re-rendering.
+
 = 2.3.5 =
 * **FIX:** The form no longer dead-ends after a server-side validation error (AJAX submit). It re-initialises, reopens the step with the error and keeps Gravity Forms' message.
 * **FIX:** "Absenden" now checks the steps first, like "Weiter". An unticked consent box shows its error instead of being sent to the server.

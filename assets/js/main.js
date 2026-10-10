@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.3.5
+ * Version:       2.3.6
  */
 
 // -----------------------------------------------------------------------------
@@ -749,10 +749,7 @@ class LandeseitenForm {
     const initialField = this.fields[this.currentFieldIndex];
     if (initialField && this.#isFieldVisible(initialField)) {
       if (initialField.hasServerError) {
-        requestAnimationFrame(() => {
-          initialField.scrollTo();
-          initialField.focus();
-        });
+        this.#revealServerErrorField(initialField);
       } else if (this.config.autoFocus) {
         initialField.focus();
       }
@@ -772,6 +769,38 @@ class LandeseitenForm {
     this.#onFieldChange();
     this.#updateButtonVisibility();
     this.#updateProgressBar();
+  }
+
+  /**
+   * Scrolls to and focuses the first step GF rejected on the server.
+   * After gform_post_render GF focuses its error summary
+   * (#gform_{id}_validation_container), which scrolls the page there and
+   * would override us — so run after that focus, with a fallback for GF
+   * versions/settings that don't focus the summary.
+   */
+  #revealServerErrorField(field) {
+    let revealed = false;
+    const reveal = () => {
+      revealed = true;
+      field.scrollTo();
+      field.focus();
+    };
+
+    const summary = this.formElement.querySelector(
+      ".gform_validation_errors, [id$='_validation_container']"
+    );
+    if (summary) {
+      const onSummaryFocus = () => setTimeout(reveal, 0);
+      summary.addEventListener("focus", onSummaryFocus, { once: true });
+      setTimeout(
+        () => summary.removeEventListener("focus", onSummaryFocus),
+        2000
+      );
+    }
+
+    setTimeout(() => {
+      if (!revealed) reveal();
+    }, 300);
   }
 
   #isFieldVisible(field) {
