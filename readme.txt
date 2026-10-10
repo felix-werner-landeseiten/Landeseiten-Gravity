@@ -55,6 +55,11 @@ Yes! In version 2.0.0, go to the "Content & Text" tab in your Landeseiten Form c
 
 == Changelog ==
 
+= 2.3.5 =
+* **FIX:** The form no longer dead-ends after a server-side validation error (AJAX submit). It re-initialises, reopens the step with the error and keeps Gravity Forms' message.
+* **FIX:** "Absenden" now checks the steps first, like "Weiter". An unticked consent box shows its error instead of being sent to the server.
+* **FIX:** Consent fields now use the configured consent message ("Bitte stimmen Sie den Bedingungen zu.") instead of the generic required-field text.
+
 = 2.0.1 =
 * **FIX:** Restored missing CSS variables for footer spacing. Buttons will now align correctly.
 * **IMPROVEMENT:** Optimized CSS file size by removing duplicate style blocks.

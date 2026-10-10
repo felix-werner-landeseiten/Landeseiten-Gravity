@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.3.1
+ * Version:       2.3.5
  */
 
 // -----------------------------------------------------------------------------
@@ -38,9 +38,15 @@ class RequiredValidator extends Validator {
       hasValue = value != null;
     }
 
+    // Consent boxes get their own configurable message.
+    const message =
+      field instanceof ConsentField && messages.consent
+        ? messages.consent
+        : messages.required;
+
     return {
       valid: hasValue,
-      message: hasValue ? null : messages.required,
+      message: hasValue ? null : message,
     };
   }
 }
@@ -128,6 +134,10 @@ class Field {
     this.wrapper = wrapper;
     this.validators = [];
     this.isDirty = false;
+    // Set when GF rendered this field with a server-side validation error
+    // (AJAX re-render after a failed submit). Its message stays until the user
+    // touches the field — client validators may not cover every server rule.
+    this.hasServerError = wrapper.classList.contains("gfield_error");
   }
 
   addValidator(validator) {
@@ -135,19 +145,26 @@ class Field {
     return this;
   }
 
-  validate(config) {
-    let errorMessage = null;
+  /**
+   * Runs the validators without touching the DOM.
+   * @returns {string|null} The first error message, or null if valid.
+   */
+  getError(config) {
     for (const validator of this.validators) {
       const result = validator.isValid(this, config.errorMessages);
-      if (!result.valid) {
-        errorMessage = result.message;
-        break;
-      }
+      if (!result.valid) return result.message;
     }
+    return null;
+  }
 
-    // Only show error if the user has interacted with the field (isDirty)
-    // or if the config forces errors to show immediately.
-    if (config.hideErrorUntilDirty && !this.isDirty) {
+  validate(config) {
+    const errorMessage = this.getError(config);
+
+    if (this.hasServerError && !this.isDirty) {
+      // Leave GF's server-side message in place until the user interacts.
+    } else if (config.hideErrorUntilDirty && !this.isDirty) {
+      // Only show error if the user has interacted with the field (isDirty)
+      // or if the config forces errors to show immediately.
       this.displayError(null);
     } else {
       this.displayError(errorMessage);
@@ -601,6 +618,7 @@ class LandeseitenForm {
   #onNextButtonClickCallback;
   #onPreviousButtonClickCallback;
   #onEnterPressedCallback;
+  #onSubmitClickCallback;
 
   constructor(form, fieldsProvider, controlsProvider, options = {}) {
     this.formElement = form;
@@ -621,6 +639,7 @@ class LandeseitenForm {
     this.#onPreviousButtonClickCallback =
       this.#onPreviousButtonClick.bind(this);
     this.#onEnterPressedCallback = this.#onEnterPressed.bind(this);
+    this.#onSubmitClickCallback = this.#onSubmitClick.bind(this);
 
     this.progressBarEl = null;
     this.progressFillEl = null;
@@ -699,7 +718,15 @@ class LandeseitenForm {
       } else {
         field.onChange(this.#onFieldChangeCallback, enterHandler);
       }
-      field.show(index === this.currentFieldIndex);
+      // After a server-side validation error the form re-renders with the
+      // error field active. In reveal mode, keep the steps before it visible
+      // as completed so the user still sees what they filled in.
+      const isRevealedStep =
+        this.config.mode === "reveal" &&
+        index < this.currentFieldIndex &&
+        this.#isFieldVisible(field);
+      if (isRevealedStep) field.wrapper.classList.add("step-completed");
+      field.show(index === this.currentFieldIndex || isRevealedStep);
     });
 
     // Hook into Gravity Forms conditional logic
@@ -717,13 +744,18 @@ class LandeseitenForm {
       });
     }
 
-    // Set initial focus
-    if (
-      this.config.autoFocus &&
-      this.fields[this.currentFieldIndex] &&
-      this.#isFieldVisible(this.fields[this.currentFieldIndex])
-    ) {
-      this.fields[this.currentFieldIndex].focus();
+    // Set initial focus. A field with a server-side error is always focused
+    // and scrolled into view so the user lands on what needs fixing.
+    const initialField = this.fields[this.currentFieldIndex];
+    if (initialField && this.#isFieldVisible(initialField)) {
+      if (initialField.hasServerError) {
+        requestAnimationFrame(() => {
+          initialField.scrollTo();
+          initialField.focus();
+        });
+      } else if (this.config.autoFocus) {
+        initialField.focus();
+      }
     }
 
     this.nextButton.addEventListener("click", this.#onNextButtonClickCallback);
@@ -731,6 +763,10 @@ class LandeseitenForm {
       "click",
       this.#onPreviousButtonClickCallback
     );
+
+    // Capture phase on the wrapper runs before GF's own handlers on the button
+    // (including its inline onclick), so an invalid step never reaches GF.
+    this.formElement.addEventListener("click", this.#onSubmitClickCallback, true);
 
     this.submitButton.style.display = "none";
     this.#onFieldChange();
@@ -787,7 +823,55 @@ class LandeseitenForm {
     } else {
       this.nextButton.disabled = false;
     }
+
+    // Clear errors on earlier steps the submit guard flagged once they're fixed
+    // (reveal mode keeps them editable while another step is current).
+    this.fields.forEach((field) => {
+      if (
+        field !== currentField &&
+        field.isDirty &&
+        field.wrapper.classList.contains("gfield_error")
+      ) {
+        field.validate(this.config);
+      }
+    });
+
     this.#updateButtonVisibility();
+  }
+
+  /**
+   * Blocks submission while any reached step is invalid, the way "Weiter"
+   * already does for each step. Without this, an unticked consent box goes to
+   * the server, and GF's re-rendered error form is what the user lands on.
+   */
+  #onSubmitClick(event) {
+    if (!this.submitButton.contains(event.target)) return;
+
+    const invalidIndex = this.fields.findIndex(
+      (field, index) =>
+        index <= this.currentFieldIndex &&
+        this.#isFieldVisible(field) &&
+        field.getError(this.config) !== null
+    );
+    if (invalidIndex === -1) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    const invalidField = this.fields[invalidIndex];
+    invalidField.isDirty = true;
+
+    if (invalidIndex !== this.currentFieldIndex && this.config.mode === "paged") {
+      // Earlier steps are hidden in paged mode; go back to the invalid one.
+      // #transitionToField re-validates it, which now shows the error.
+      this.#transitionToField(invalidIndex);
+      return;
+    }
+
+    invalidField.validate(this.config);
+    this.#onFieldChange();
+    invalidField.scrollTo();
+    invalidField.focus();
   }
 
   #transitionToField(newIndex) {
@@ -867,7 +951,7 @@ class LandeseitenForm {
     const prevVisibleIndex = this.#findPrevVisibleIndex(this.currentFieldIndex);
 
     // Show submit on the last visible field regardless of validity —
-    // GF handles its own submission validation. Showing Weiter on the last
+    // #onSubmitClick validates on click. Showing Weiter on the last
     // field confuses users who have already filled it in.
     if (nextVisibleIndex === -1) {
       this.submitButton.style.display = "inline-block";

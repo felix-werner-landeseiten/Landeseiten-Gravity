@@ -5,7 +5,7 @@
  * Single source of truth for default configuration values.
  * Handles AJAX re-initialization after Gravity Forms AJAX submissions.
  * Author:        Landeseiten.de
- * Version:       2.3.1
+ * Version:       2.3.5
  */
 
 /**
@@ -115,10 +115,18 @@ if (typeof jQuery !== "undefined") {
     const wrapper = document.querySelector(
       '.landeseiten-form-active[data-form-id="' + formId + '"]'
     );
-    if (wrapper) {
-      // Allow the form to re-init by removing from tracked set
-      _lfInitializedForms.delete(wrapper);
-      lfInitForm(wrapper);
-    }
+    if (!wrapper) return;
+
+    // GF also fires gform_post_render on the first page load. If our injected
+    // "Weiter" button is still there, this is the DOM we already bound to —
+    // re-initialising it would double-bind every listener.
+    if (wrapper.querySelector(".button-next")) return;
+
+    // GF replaced the form markup (AJAX validation error or page change) but may
+    // keep the wrapper element, so the DOM guard in lfInitForm must be cleared
+    // too — otherwise the re-init is skipped and no step is ever shown.
+    delete wrapper.dataset.lfInitialized;
+    _lfInitializedForms.delete(wrapper);
+    lfInitForm(wrapper);
   });
 }
