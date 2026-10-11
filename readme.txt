@@ -55,6 +55,9 @@ Yes! In version 2.0.0, go to the "Content & Text" tab in your Landeseiten Form c
 
 == Changelog ==
 
+= 2.3.7 =
+* **FIX:** The jump to the failed step after a server-side error now runs after Gravity Forms' own scroll back to the form top (50ms after it focuses the error summary). In 2.3.6 GF's scroll undid it.
+
 = 2.3.6 =
 * **FIX:** After a server-side validation error, the page now ends on the failed step (scrolled into view and focused) instead of staying at Gravity Forms' error summary, which GF focuses after re-rendering.
 

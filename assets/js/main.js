@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.3.6
+ * Version:       2.3.7
  */
 
 // -----------------------------------------------------------------------------
@@ -774,9 +774,10 @@ class LandeseitenForm {
   /**
    * Scrolls to and focuses the first step GF rejected on the server.
    * After gform_post_render GF focuses its error summary
-   * (#gform_{id}_validation_container), which scrolls the page there and
-   * would override us — so run after that focus, with a fallback for GF
-   * versions/settings that don't focus the summary.
+   * (#gform_{id}_validation_container), and its AJAX handler scrolls back to
+   * the form top 50ms later (scrollTop to #gform_wrapper_{id}). Both would
+   * override us, so reveal 150ms after the summary focus, with a fallback
+   * for GF versions/settings that don't focus the summary.
    */
   #revealServerErrorField(field) {
     let revealed = false;
@@ -790,7 +791,7 @@ class LandeseitenForm {
       ".gform_validation_errors, [id$='_validation_container']"
     );
     if (summary) {
-      const onSummaryFocus = () => setTimeout(reveal, 0);
+      const onSummaryFocus = () => setTimeout(reveal, 150);
       summary.addEventListener("focus", onSummaryFocus, { once: true });
       setTimeout(
         () => summary.removeEventListener("focus", onSummaryFocus),
@@ -800,7 +801,7 @@ class LandeseitenForm {
 
     setTimeout(() => {
       if (!revealed) reveal();
-    }, 300);
+    }, 400);
   }
 
   #isFieldVisible(field) {
