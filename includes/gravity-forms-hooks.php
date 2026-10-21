@@ -172,6 +172,9 @@ function lf_apply_form_settings( $form ) {
 		// datepicker fields. Both conflict with Flatpickr, so strip them at render time.
 		add_filter( 'gform_field_content_' . $form_id, 'lf_strip_gf_datepicker_extras', 10, 5 );
 
+		// Mark fields placed in the same row so the JS can show them together as one step.
+		add_filter( 'gform_field_container_' . $form_id, 'lf_add_row_attributes', 10, 3 );
+
 		// --- 1. Prepare Date Picker Configs ---
 		$date_fields_config = [];
 		foreach ( $form['fields'] as $field ) {
@@ -393,6 +396,42 @@ function lf_strip_gf_datepicker_extras( $content, $field, $value, $lead_id, $for
 	$content = preg_replace( '/<button\b[^>]*\bgform-datepicker-toggle\b[^>]*>.*?<\/button>/s', '', $content );
 
 	return $content;
+}
+
+/**
+ * Copies Gravity Forms' row layout onto the field container.
+ *
+ * GF keeps the row (layoutGroupId) and column span (layoutGridColumnSpan) on the
+ * server only. They are written as data-lf-row / data-lf-span so the JS can group
+ * fields of the same row into one step and show them side by side.
+ *
+ * Hooked to gform_field_container_{form_id} for configured Landeseiten forms only.
+ *
+ * @since 2.4.0
+ */
+function lf_add_row_attributes( $field_container, $field, $form ) {
+	if ( ! is_object( $field ) || empty( $field->layoutGroupId ) ) {
+		return $field_container;
+	}
+	// Legacy markup has no column layout.
+	if ( is_callable( [ 'GFCommon', 'is_legacy_markup_enabled' ] ) && GFCommon::is_legacy_markup_enabled( $form ) ) {
+		return $field_container;
+	}
+
+	$attributes = ' data-lf-row="' . esc_attr( $field->layoutGroupId ) . '"';
+	if ( ! empty( $field->layoutGridColumnSpan ) ) {
+		$attributes .= ' data-lf-span="' . absint( $field->layoutGridColumnSpan ) . '"';
+	}
+
+	// Insert right after the opening tag name (<div or <li).
+	return preg_replace_callback(
+		'/^\s*<[a-zA-Z]+/',
+		function ( $matches ) use ( $attributes ) {
+			return $matches[0] . $attributes;
+		},
+		$field_container,
+		1
+	);
 }
 
 /* ---------------------------------------------------------------------------

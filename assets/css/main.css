@@ -30,6 +30,7 @@
   --landeseiten-form-vertical-margin: 40px;
   --landeseiten-form-field-vertical-padding: 30px;
   --landeseiten-form-reveal-padding: 60vh;
+  --landeseiten-form-column-gap: 24px;
 
   /* --- Footer Spacing (ADDED) --- */
   --landeseiten-form-footer-gap: 15px;
@@ -166,6 +167,38 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
   border-top: 1px dashed var(--landeseiten-form-border-color-light);
 }
 
+/* Fields placed in the same Gravity Forms row form one step, side by side.
+   The JS sets .lf-has-rows, .lf-in-row, .lf-row-start and --lf-row-span. */
+.gform_wrapper.cs-landeseiten-form.lf-has-rows .gform_fields {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--landeseiten-form-column-gap);
+}
+
+.gform_wrapper.cs-landeseiten-form.lf-has-rows .gfield {
+  grid-column: 1 / -1;
+}
+
+.gform_wrapper.cs-landeseiten-form.lf-has-rows .gfield.lf-in-row {
+  grid-column: auto / span var(--lf-row-span, 6);
+}
+
+/* Each row starts on a new line, even after a row narrower than 12 columns */
+.gform_wrapper.cs-landeseiten-form.lf-has-rows .gfield.lf-row-start {
+  grid-column-start: 1;
+}
+
+@media (max-width: 640px) {
+  .gform_wrapper.cs-landeseiten-form.lf-has-rows .gfield.lf-in-row {
+    grid-column: 1 / -1;
+  }
+
+  /* Stacked fields of one row sit closer together than separate steps */
+  .gform_wrapper.cs-landeseiten-form.lf-has-rows .gfield.lf-in-row:not(.lf-row-start) {
+    padding-top: 0;
+  }
+}
+
 /* =============================== */
 /* --- 5. Input Field Styling --- */
 /* =============================== */
@@ -210,6 +243,17 @@ body.elementor-editor-active .gform_wrapper.cs-landeseiten-form .gfield {
   text-align: center;
   box-sizing: border-box;
   transition: all var(--landeseiten-form-transition-duration) ease-in-out;
+}
+
+/* With appearance:none (GF theme reset) a select draws its text at the top;
+   a line-height equal to its inner height centers it vertically. */
+.gform_wrapper.cs-landeseiten-form .ginput_container select {
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: calc(
+    var(--landeseiten-form-input-height) - 2 *
+      var(--landeseiten-form-input-border-width)
+  );
 }
 
 .gform_wrapper.cs-landeseiten-form .ginput_container input:focus,

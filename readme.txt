@@ -55,6 +55,11 @@ Yes! In version 2.0.0, go to the "Content & Text" tab in your Landeseiten Form c
 
 == Changelog ==
 
+= 2.4.0 =
+* **NEW:** Fields placed in the same Gravity Forms row now appear together as one step, side by side (stacked on phones). "Weiter" unlocks once every field in the row is valid; Enter or picking a choice moves to the row's next empty field, and advances when the row is complete. Rows whose other fields are hidden by conditional logic stretch to full width.
+* **FIX:** Changing a dropdown in an already completed step (reveal mode) no longer skips the current step.
+* **FIX:** Dropdown text is vertically centered in the select box.
+
 = 2.3.7 =
 * **FIX:** The jump to the failed step after a server-side error now runs after Gravity Forms' own scroll back to the form top (50ms after it focuses the error summary). In 2.3.6 GF's scroll undid it.
 

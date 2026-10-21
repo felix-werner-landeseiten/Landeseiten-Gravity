@@ -4,7 +4,7 @@
  * Description:   Main JavaScript for the CS Landeseiten Form Gravity Forms wrapper.
  * Handles animations, validation, state management, and the progress bar.
  * Author:        Landeseiten.de
- * Version:       2.3.7
+ * Version:       2.4.0
  */
 
 // -----------------------------------------------------------------------------
@@ -617,7 +617,6 @@ class LandeseitenForm {
   #onFieldChangeCallback;
   #onNextButtonClickCallback;
   #onPreviousButtonClickCallback;
-  #onEnterPressedCallback;
   #onSubmitClickCallback;
 
   constructor(form, fieldsProvider, controlsProvider, options = {}) {
@@ -627,6 +626,9 @@ class LandeseitenForm {
     this.config = options;
 
     this.fields = fieldsProvider.provide(this.config);
+    // Each step is an array of fields: one field, or all fields GF placed in
+    // the same row (shown side by side and completed together).
+    this.steps = this.#groupIntoSteps(this.fields);
     const { nextButton, previousButton, submitButton } =
       controlsProvider.provide();
 
@@ -638,7 +640,6 @@ class LandeseitenForm {
     this.#onNextButtonClickCallback = this.#onNextButtonClick.bind(this);
     this.#onPreviousButtonClickCallback =
       this.#onPreviousButtonClick.bind(this);
-    this.#onEnterPressedCallback = this.#onEnterPressed.bind(this);
     this.#onSubmitClickCallback = this.#onSubmitClick.bind(this);
 
     this.progressBarEl = null;
@@ -680,54 +681,36 @@ class LandeseitenForm {
       );
     }
 
-    // Calculate initial active field index
-    let initialIndex = this.fields.findIndex(
-      (field) =>
-        field.wrapper.classList.contains("gfield_error") &&
-        this.#isFieldVisible(field)
+    // Calculate initial active step
+    let initialIndex = this.steps.findIndex((step) =>
+      this.#visibleFields(step).some((field) =>
+        field.wrapper.classList.contains("gfield_error")
+      )
     );
     if (initialIndex === -1) {
-      initialIndex = this.fields.findIndex((field) =>
-        this.#isFieldVisible(field)
-      );
+      initialIndex = this.steps.findIndex((step) => this.#isStepVisible(step));
     }
-    this.currentFieldIndex = initialIndex === -1 ? 0 : initialIndex;
+    this.currentStepIndex = initialIndex === -1 ? 0 : initialIndex;
 
-    // Bind events to fields
-    this.fields.forEach((field, index) => {
-      const enterHandler = this.config.enterToAdvance
-        ? this.#onEnterPressedCallback
-        : () => {};
+    this.fields.forEach((field) => this.#bindField(field));
 
-      if (field instanceof FileUploadField) {
-        field.onChange(this.#onFieldChangeCallback, (e) => {
-          this.#onFieldChangeCallback(e);
-          setTimeout(() => this.#onNextButtonClick(), 100);
-        });
-      } else if (field instanceof SelectField) {
-        field.onChange((e) => {
-          this.#onFieldChangeCallback(e);
-          setTimeout(() => this.#onNextButtonClick(), 200);
-        });
-      } else if (field instanceof RadioField && this.config.autoProgressRadio) {
-        field.onChange((e) => {
-          this.#onFieldChangeCallback(e);
-          this.#updateButtonVisibility();
-          this.#onRadioSelect();
-        });
-      } else {
-        field.onChange(this.#onFieldChangeCallback, enterHandler);
-      }
+    this.steps.forEach((step, index) => {
       // After a server-side validation error the form re-renders with the
-      // error field active. In reveal mode, keep the steps before it visible
+      // error step active. In reveal mode, keep the steps before it visible
       // as completed so the user still sees what they filled in.
       const isRevealedStep =
         this.config.mode === "reveal" &&
-        index < this.currentFieldIndex &&
-        this.#isFieldVisible(field);
-      if (isRevealedStep) field.wrapper.classList.add("step-completed");
-      field.show(index === this.currentFieldIndex || isRevealedStep);
+        index < this.currentStepIndex &&
+        this.#isStepVisible(step);
+      if (isRevealedStep) this.#setStepCompleted(step, true);
+      this.#showStep(step, index === this.currentStepIndex || isRevealedStep);
     });
+
+    this.formElement.classList.toggle(
+      "lf-has-rows",
+      this.steps.some((step) => step.length > 1)
+    );
+    this.#updateRowLayout();
 
     // Hook into Gravity Forms conditional logic
     // This ensures buttons update if GF suddenly shows/hides the last field
@@ -736,7 +719,8 @@ class LandeseitenForm {
         // Only trigger if this instance belongs to the triggered form
         const instanceFormId = this.formElement.getAttribute("data-form-id") || this.formElement.id.replace(/\D/g, "");
         if (formId == instanceFormId) {
-          // Re-validate the current field so nextButton.disabled is fresh
+          this.#updateRowLayout();
+          // Re-validate the current step so nextButton.disabled is fresh
           // before computing button/submit visibility from the new field layout.
           this.#onFieldChange();
           this.#updateProgressBar();
@@ -746,12 +730,15 @@ class LandeseitenForm {
 
     // Set initial focus. A field with a server-side error is always focused
     // and scrolled into view so the user lands on what needs fixing.
-    const initialField = this.fields[this.currentFieldIndex];
-    if (initialField && this.#isFieldVisible(initialField)) {
-      if (initialField.hasServerError) {
-        this.#revealServerErrorField(initialField);
+    const initialStep = this.steps[this.currentStepIndex];
+    if (initialStep && this.#isStepVisible(initialStep)) {
+      const serverErrorField = this.#visibleFields(initialStep).find(
+        (field) => field.hasServerError
+      );
+      if (serverErrorField) {
+        this.#revealServerErrorField(serverErrorField);
       } else if (this.config.autoFocus) {
-        initialField.focus();
+        this.#focusStep(initialStep);
       }
     }
 
@@ -817,39 +804,155 @@ class LandeseitenForm {
     return true;
   }
 
+  #visibleFields(step) {
+    return step.filter((field) => this.#isFieldVisible(field));
+  }
+
+  #isStepVisible(step) {
+    return step.some((field) => this.#isFieldVisible(field));
+  }
+
+  /**
+   * Groups consecutive fields with the same GF row (data-lf-row, set in PHP)
+   * into one step. Fields without a row are a step of their own.
+   */
+  #groupIntoSteps(fields) {
+    const steps = [];
+    fields.forEach((field) => {
+      const row = field.wrapper.dataset.lfRow;
+      const lastStep = steps[steps.length - 1];
+      if (row && lastStep && lastStep[0].wrapper.dataset.lfRow === row) {
+        lastStep.push(field);
+      } else {
+        steps.push([field]);
+      }
+    });
+    return steps;
+  }
+
+  /**
+   * Sizes the fields of each row step on the 12-column grid. GF's spans are
+   * scaled to fill the row, so a row whose other fields are hidden by
+   * conditional logic still spans the full width.
+   */
+  #updateRowLayout() {
+    this.steps.forEach((step) => {
+      const visibleFields = this.#visibleFields(step);
+      const isRow = visibleFields.length > 1;
+      const spans = visibleFields.map(
+        (field) => parseInt(field.wrapper.dataset.lfSpan, 10) || 6
+      );
+      const totalSpan = spans.reduce((sum, span) => sum + span, 0);
+      let usedSpan = 0;
+
+      step.forEach((field) => {
+        const position = visibleFields.indexOf(field);
+        const inRow = isRow && position !== -1;
+        field.wrapper.classList.toggle("lf-in-row", inRow);
+        field.wrapper.classList.toggle("lf-row-start", inRow && position === 0);
+        if (!inRow) {
+          field.wrapper.style.removeProperty("--lf-row-span");
+          return;
+        }
+        const isLast = position === visibleFields.length - 1;
+        const span = isLast
+          ? Math.max(1, 12 - usedSpan)
+          : Math.max(1, Math.round((spans[position] * 12) / totalSpan));
+        usedSpan += span;
+        field.wrapper.style.setProperty("--lf-row-span", span);
+      });
+    });
+  }
+
+  #showStep(step, flag) {
+    step.forEach((field) => field.show(flag));
+  }
+
+  #setStepCompleted(step, flag) {
+    step.forEach((field) => field.wrapper.classList.toggle("step-completed", flag));
+  }
+
+  /**
+   * Focuses the first field showing an error, otherwise the first field.
+   */
+  #focusStep(step) {
+    const visibleFields = this.#visibleFields(step);
+    const target =
+      visibleFields.find((field) =>
+        field.wrapper.classList.contains("gfield_error")
+      ) || visibleFields[0];
+    if (target) target.focus();
+  }
+
   #findNextVisibleIndex(startIndex) {
-    for (let i = startIndex + 1; i < this.fields.length; i++) {
-      if (this.#isFieldVisible(this.fields[i])) return i;
+    for (let i = startIndex + 1; i < this.steps.length; i++) {
+      if (this.#isStepVisible(this.steps[i])) return i;
     }
     return -1;
   }
 
   #findPrevVisibleIndex(startIndex) {
     for (let i = startIndex - 1; i >= 0; i--) {
-      if (this.#isFieldVisible(this.fields[i])) return i;
+      if (this.#isStepVisible(this.steps[i])) return i;
     }
     return -1;
   }
 
-  #onRadioSelect() {
-    setTimeout(() => {
-      if (!this.isAnimating && !this.nextButton.disabled) {
-        this.#onNextButtonClick();
-      }
-    }, 150);
-  }
+  #bindField(field) {
+    const onCompleted = () => this.#onFieldCompleted(field);
 
-  #onEnterPressed() {
-    if (!this.nextButton.disabled && !this.isAnimating) {
-      this.#onNextButtonClick();
+    if (field instanceof FileUploadField) {
+      field.onChange(this.#onFieldChangeCallback, (e) => {
+        this.#onFieldChangeCallback(e);
+        setTimeout(onCompleted, 100);
+      });
+    } else if (field instanceof SelectField) {
+      field.onChange((e) => {
+        this.#onFieldChangeCallback(e);
+        setTimeout(onCompleted, 200);
+      });
+    } else if (field instanceof RadioField && this.config.autoProgressRadio) {
+      field.onChange((e) => {
+        this.#onFieldChangeCallback(e);
+        setTimeout(onCompleted, 150);
+      });
+    } else {
+      field.onChange(
+        this.#onFieldChangeCallback,
+        this.config.enterToAdvance ? onCompleted : () => {}
+      );
     }
   }
 
+  /**
+   * Runs when the user is done with a field: a choice picked, a file chosen or
+   * Enter pressed. Advances once the whole step is valid. In a row with fields
+   * still missing, focus moves to the next one instead.
+   */
+  #onFieldCompleted(field) {
+    const currentStep = this.steps[this.currentStepIndex];
+    // Edits to earlier steps (reveal mode keeps them editable) don't advance.
+    if (this.isAnimating || !currentStep || !currentStep.includes(field)) return;
+
+    if (!this.nextButton.disabled) {
+      this.#onNextButtonClick();
+      return;
+    }
+
+    if (field.getError(this.config) !== null) return;
+    const pendingField = this.#visibleFields(currentStep).find(
+      (other) => other.getError(this.config) !== null
+    );
+    if (pendingField) pendingField.focus();
+  }
+
   #onFieldChange() {
-    const currentField = this.fields[this.currentFieldIndex];
-    if (currentField && this.#isFieldVisible(currentField)) {
-      const isCurrentFieldValid = currentField.validate(this.config);
-      this.nextButton.disabled = !isCurrentFieldValid;
+    const currentStep = this.steps[this.currentStepIndex] || [];
+    const currentFields = this.#visibleFields(currentStep);
+    if (currentFields.length) {
+      // Validate every field so each one shows its own error.
+      const results = currentFields.map((field) => field.validate(this.config));
+      this.nextButton.disabled = results.includes(false);
     } else {
       this.nextButton.disabled = false;
     }
@@ -858,7 +961,7 @@ class LandeseitenForm {
     // (reveal mode keeps them editable while another step is current).
     this.fields.forEach((field) => {
       if (
-        field !== currentField &&
+        !currentStep.includes(field) &&
         field.isDirty &&
         field.wrapper.classList.contains("gfield_error")
       ) {
@@ -877,47 +980,53 @@ class LandeseitenForm {
   #onSubmitClick(event) {
     if (!this.submitButton.contains(event.target)) return;
 
-    const invalidIndex = this.fields.findIndex(
-      (field, index) =>
-        index <= this.currentFieldIndex &&
-        this.#isFieldVisible(field) &&
-        field.getError(this.config) !== null
+    const invalidFieldsOf = (step) =>
+      this.#visibleFields(step).filter(
+        (field) => field.getError(this.config) !== null
+      );
+    const invalidIndex = this.steps.findIndex(
+      (step, index) =>
+        index <= this.currentStepIndex && invalidFieldsOf(step).length > 0
     );
     if (invalidIndex === -1) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
 
-    const invalidField = this.fields[invalidIndex];
-    invalidField.isDirty = true;
+    const invalidFields = invalidFieldsOf(this.steps[invalidIndex]);
+    invalidFields.forEach((field) => {
+      field.isDirty = true;
+    });
 
-    if (invalidIndex !== this.currentFieldIndex && this.config.mode === "paged") {
+    if (invalidIndex !== this.currentStepIndex && this.config.mode === "paged") {
       // Earlier steps are hidden in paged mode; go back to the invalid one.
-      // #transitionToField re-validates it, which now shows the error.
-      this.#transitionToField(invalidIndex);
+      // #transitionToStep re-validates it, which now shows the errors.
+      this.#transitionToStep(invalidIndex);
       return;
     }
 
-    invalidField.validate(this.config);
+    invalidFields.forEach((field) => field.validate(this.config));
     this.#onFieldChange();
-    invalidField.scrollTo();
-    invalidField.focus();
+    invalidFields[0].scrollTo();
+    invalidFields[0].focus();
   }
 
-  #transitionToField(newIndex) {
+  #transitionToStep(newIndex) {
     if (this.isAnimating) return;
     this.isAnimating = true;
 
-    const oldIndex = this.currentFieldIndex;
+    const oldIndex = this.currentStepIndex;
     const isForward = newIndex > oldIndex;
     this.formElement.classList.toggle("is-reversing", !isForward);
 
-    const oldField = this.fields[oldIndex];
-    const newField = this.fields[newIndex];
+    const oldStep = this.steps[oldIndex];
+    const newStep = this.steps[newIndex];
 
-    const scrollToShowField = () => {
+    const scrollToShowStep = () => {
       requestAnimationFrame(() => {
-        const rect = newField.wrapper.getBoundingClientRect();
+        // The step's first field is its top edge (rows stack on phones).
+        const newWrapper = (this.#visibleFields(newStep)[0] || newStep[0]).wrapper;
+        const rect = newWrapper.getBoundingClientRect();
         const absoluteTop = rect.top + window.scrollY;
         const targetScroll = absoluteTop - this.config.scrollTopMargin;
         // In reveal mode going forward, never scroll UP — the new field must
@@ -926,33 +1035,33 @@ class LandeseitenForm {
         if (this.config.mode === "reveal" && isForward && targetScroll <= window.scrollY) {
           return;
         }
-        newField.wrapper.style.scrollMarginTop = this.config.scrollTopMargin + "px";
-        newField.wrapper.scrollIntoView({ behavior: "smooth", block: "start" });
+        newWrapper.style.scrollMarginTop = this.config.scrollTopMargin + "px";
+        newWrapper.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     };
 
     const completeTransition = () => {
-      oldField.wrapper.classList.remove("animating-out");
+      oldStep.forEach((field) => field.wrapper.classList.remove("animating-out"));
       if (this.config.mode === "paged" || !isForward) {
-        oldField.show(false);
+        this.#showStep(oldStep, false);
       }
-      newField.show(true);
-      scrollToShowField();
+      this.#showStep(newStep, true);
+      scrollToShowStep();
 
       if (this.config.autoFocus) {
         setTimeout(() => {
-          newField.focus();
+          this.#focusStep(newStep);
         }, 300);
       }
 
-      this.currentFieldIndex = newIndex;
+      this.currentStepIndex = newIndex;
       this.#onFieldChange();
       this.#updateProgressBar();
       this.isAnimating = false;
     };
 
     if (this.config.mode === "paged") {
-      oldField.wrapper.classList.add("animating-out");
+      oldStep.forEach((field) => field.wrapper.classList.add("animating-out"));
       setTimeout(completeTransition, 500);
     } else {
       completeTransition();
@@ -960,29 +1069,29 @@ class LandeseitenForm {
   }
 
   #onNextButtonClick() {
-    const nextIndex = this.#findNextVisibleIndex(this.currentFieldIndex);
+    const nextIndex = this.#findNextVisibleIndex(this.currentStepIndex);
     if (nextIndex === -1) {
       this.#updateButtonVisibility();
       return;
     }
-    this.fields[this.currentFieldIndex].wrapper.classList.add("step-completed");
-    this.#transitionToField(nextIndex);
+    this.#setStepCompleted(this.steps[this.currentStepIndex], true);
+    this.#transitionToStep(nextIndex);
   }
 
   #onPreviousButtonClick() {
-    const prevIndex = this.#findPrevVisibleIndex(this.currentFieldIndex);
+    const prevIndex = this.#findPrevVisibleIndex(this.currentStepIndex);
     if (prevIndex === -1) return;
-    this.fields[prevIndex].wrapper.classList.remove("step-completed");
-    this.#transitionToField(prevIndex);
+    this.#setStepCompleted(this.steps[prevIndex], false);
+    this.#transitionToStep(prevIndex);
   }
 
   #updateButtonVisibility() {
-    const nextVisibleIndex = this.#findNextVisibleIndex(this.currentFieldIndex);
-    const prevVisibleIndex = this.#findPrevVisibleIndex(this.currentFieldIndex);
+    const nextVisibleIndex = this.#findNextVisibleIndex(this.currentStepIndex);
+    const prevVisibleIndex = this.#findPrevVisibleIndex(this.currentStepIndex);
 
-    // Show submit on the last visible field regardless of validity —
+    // Show submit on the last visible step regardless of validity —
     // #onSubmitClick validates on click. Showing Weiter on the last
-    // field confuses users who have already filled it in.
+    // step confuses users who have already filled it in.
     if (nextVisibleIndex === -1) {
       this.submitButton.style.display = "inline-block";
       this.nextButton.style.display = "none";
@@ -997,12 +1106,12 @@ class LandeseitenForm {
   #updateProgressBar() {
     if (!this.progressBarEl || !this.progressFillEl) return;
 
-    // Filter visible fields to calculate accurate percentage
-    const visibleFields = this.fields.filter((f) => this.#isFieldVisible(f));
-    const currentVisibleIndex = visibleFields.indexOf(
-      this.fields[this.currentFieldIndex]
+    // Filter visible steps to calculate accurate percentage
+    const visibleSteps = this.steps.filter((step) => this.#isStepVisible(step));
+    const currentVisibleIndex = visibleSteps.indexOf(
+      this.steps[this.currentStepIndex]
     );
-    const total = visibleFields.length;
+    const total = visibleSteps.length;
 
     if (total <= 1) {
       this.progressFillEl.style.width = "0%";
