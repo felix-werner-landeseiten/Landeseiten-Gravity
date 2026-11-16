@@ -204,46 +204,22 @@ function lf_apply_form_settings( $form ) {
 			$settings_for_js['mode'] = $mode;
 		}
 
-		// Calendar Language
-		$cal_lang = get_post_meta( $config_post_id, '_lf_calendar_lang', true );
-		if ( $cal_lang && $cal_lang !== 'en' ) {
+		// Calendar Language ("auto" follows the page language)
+		$cal_lang = lf_resolve_calendar_lang( get_post_meta( $config_post_id, '_lf_calendar_lang', true ) );
+		if ( $cal_lang && $cal_lang !== 'en' && lf_enqueue_calendar_locale( $cal_lang ) ) {
 			$settings_for_js['calendarLang'] = $cal_lang;
-			wp_enqueue_script( 'flatpickr-l10n-' . $cal_lang );
 		}
-		
+
 		// Progress Bar
 		if ( get_post_meta( $config_post_id, '_lf_enable_progress_bar', true ) ) {
 			$settings_for_js['progressBar'] = true;
 		}
 
-		// Button Texts
-		$btn_next   = get_post_meta( $config_post_id, '_lf_btn_next_text', true );
-		$btn_prev   = get_post_meta( $config_post_id, '_lf_btn_prev_text', true );
-		$btn_submit = get_post_meta( $config_post_id, '_lf_btn_submit_text', true );
-		
-		if ( $btn_next || $btn_prev || $btn_submit ) {
-			$settings_for_js['buttonText'] = [];
-			if ( $btn_next ) $settings_for_js['buttonText']['next'] = $btn_next;
-			if ( $btn_prev ) $settings_for_js['buttonText']['previous'] = $btn_prev;
-			if ( $btn_submit ) $settings_for_js['buttonText']['submit'] = $btn_submit;
-		}
+		// Button texts and error messages, in the page language (WPML / Polylang)
+		$texts = lf_get_frontend_texts( $config_post_id, $form_id );
+		$settings_for_js['buttonText']    = $texts['buttonText'];
+		$settings_for_js['errorMessages'] = $texts['errorMessages'];
 
-		// Error Messages
-		$error_req   = lf_get_custom_error_message( $config_post_id, '_lf_error_required' );
-		$error_email = lf_get_custom_error_message( $config_post_id, '_lf_error_email' );
-		$error_phone = lf_get_custom_error_message( $config_post_id, '_lf_error_phone' );
-		$error_url   = lf_get_custom_error_message( $config_post_id, '_lf_error_url' );
-		
-		$settings_for_js['errorMessages'] = [];
-		if ( $error_req ) $settings_for_js['errorMessages']['required'] = $error_req;
-		if ( $error_email ) $settings_for_js['errorMessages']['email'] = $error_email;
-		if ( $error_phone ) $settings_for_js['errorMessages']['phone'] = $error_phone;
-		if ( $error_url ) $settings_for_js['errorMessages']['url'] = $error_url;
-
-		// Consent error message
-		$error_consent = lf_get_custom_error_message( $config_post_id, '_lf_error_consent' );
-		if ( $error_consent ) $settings_for_js['errorMessages']['consent'] = $error_consent;
-		
 		// Use per-form variable name to prevent clobbering on multi-form pages
 		wp_localize_script( 'landeseiten-form-init-script', 'lf_form_settings_' . $form_id, $settings_for_js );
 

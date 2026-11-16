@@ -7,7 +7,7 @@
  *
  * @package LandeseitenForm
  * @since   1.0.0
- * @version 2.0.1
+ * @version 2.5.0
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -47,6 +47,8 @@ function lf_render_settings_meta_box( $post ) {
 	$saved_form_id   = get_post_meta( $post->ID, '_lf_gravity_form_id', true );
 	$saved_mode      = get_post_meta( $post->ID, '_lf_mode', true );
 	$saved_cal_lang  = get_post_meta( $post->ID, '_lf_calendar_lang', true );
+	// New configs follow the page language; existing ones keep their saved (or legacy English) choice.
+	$cal_lang_value  = $saved_cal_lang ?: ( 'auto-draft' === $post->post_status ? 'auto' : 'en' );
 	$saved_max_width = get_post_meta( $post->ID, '_lf_container_max_width', true );
 
 	// --- 2. Retrieve Design & Color Settings ---
@@ -90,6 +92,7 @@ function lf_render_settings_meta_box( $post ) {
 
 	// --- 5. Retrieve Error Messages ---
 	$error_defaults      = lf_error_message_defaults();
+	$text_defaults       = lf_text_defaults();
 	$saved_error_req     = lf_get_custom_error_message( $post->ID, '_lf_error_required' );
 	$saved_error_email   = lf_get_custom_error_message( $post->ID, '_lf_error_email' );
 	$saved_error_phone   = lf_get_custom_error_message( $post->ID, '_lf_error_phone' );
@@ -126,6 +129,7 @@ function lf_render_settings_meta_box( $post ) {
 		.lf-field input[type="text"], .lf-field input[type="number"], .lf-field select { width: 100%; border: 1px solid #dcdcde; border-radius: 4px; padding: 0 12px; height: 40px; box-shadow: none; transition: border-color 0.2s; font-size: 14px; }
 		.lf-field input:focus, .lf-field select:focus { border-color: #0073aa; box-shadow: 0 0 0 1px #0073aa; outline: none; }
 		.description { font-size: 12px; color: #8c8f94; margin-top: 5px; display: block; }
+		.lf-i18n-notice { background: #fff; border-left: 4px solid #0073aa; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 12px 16px; margin: 0 0 20px 0; font-size: 13px; color: #1d2327; }
 
 		/* Color Picker Fix */
 		.lf-field .wp-picker-container { display: block; }
@@ -195,9 +199,11 @@ function lf_render_settings_meta_box( $post ) {
 					<div class="lf-field">
 						<label><?php esc_html_e( 'Calendar Language', 'landeseiten-form' ); ?></label>
 						<select name="lf_calendar_lang">
-							<option value="en" <?php selected( $saved_cal_lang ?: 'en', 'en' ); ?>><?php esc_html_e( 'English', 'landeseiten-form' ); ?></option>
-							<option value="de" <?php selected( $saved_cal_lang, 'de' ); ?>><?php esc_html_e( 'Deutsch', 'landeseiten-form' ); ?></option>
+							<option value="auto" <?php selected( $cal_lang_value, 'auto' ); ?>><?php esc_html_e( 'Automatic (page language)', 'landeseiten-form' ); ?></option>
+							<option value="en" <?php selected( $cal_lang_value, 'en' ); ?>><?php esc_html_e( 'English', 'landeseiten-form' ); ?></option>
+							<option value="de" <?php selected( $cal_lang_value, 'de' ); ?>><?php esc_html_e( 'Deutsch', 'landeseiten-form' ); ?></option>
 						</select>
+						<span class="description"><?php esc_html_e( 'Automatic follows the language of the page (WPML / Polylang); languages without a bundled calendar show English.', 'landeseiten-form' ); ?></span>
 					</div>
 				</div>
 			</div>
@@ -344,16 +350,17 @@ function lf_render_settings_meta_box( $post ) {
 		</div>
 
 		<div id="tab-text" class="lf-tab-content">
+			<?php echo wp_kses_post( lf_translation_notice_html() ); ?>
 			<div class="lf-card">
 				<h3 class="lf-card-title">🏷️ <?php esc_html_e( 'UI Labels', 'landeseiten-form' ); ?></h3>
 				<div class="lf-grid">
 					<div class="lf-field">
 						<label><?php esc_html_e( 'Next Button', 'landeseiten-form' ); ?></label>
-						<input type="text" name="lf_btn_next_text" value="<?php echo esc_attr( $saved_btn_next ?: 'Weiter →' ); ?>" />
+						<input type="text" name="lf_btn_next_text" value="<?php echo esc_attr( $saved_btn_next ?: $text_defaults['_lf_btn_next_text'] ); ?>" />
 					</div>
 					<div class="lf-field">
 						<label><?php esc_html_e( 'Previous Button', 'landeseiten-form' ); ?></label>
-						<input type="text" name="lf_btn_prev_text" value="<?php echo esc_attr( $saved_btn_prev ?: '← Zurück' ); ?>" />
+						<input type="text" name="lf_btn_prev_text" value="<?php echo esc_attr( $saved_btn_prev ?: $text_defaults['_lf_btn_prev_text'] ); ?>" />
 					</div>
 					<div class="lf-field">
 						<label><?php esc_html_e( 'Submit Button', 'landeseiten-form' ); ?></label>

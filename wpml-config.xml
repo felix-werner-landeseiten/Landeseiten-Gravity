@@ -1,0 +1,12 @@
+<wpml-config>
+    <!--
+        Landeseiten Form configs (lf_form) are shared by all languages: the plugin
+        looks them up by Gravity Forms ID, and Gravity Forms Multilingual keeps the
+        same form ID in every language. Making them translatable would hide them on
+        translated pages. Button texts and error messages are translated as strings
+        instead (WPML -> String Translation, domain "Landeseiten Form").
+    -->
+    <custom-types>
+        <custom-type translate="0">lf_form</custom-type>
+    </custom-types>
+</wpml-config>

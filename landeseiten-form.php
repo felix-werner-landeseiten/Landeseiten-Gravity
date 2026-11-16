@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Landeseiten Form for Gravity Forms
  * Description:       A premium wrapper for Gravity Forms to create multi-step, animated user experiences with modern styling.
- * Version:           2.4.0
+ * Version:           2.5.0
  * Author:            Landeseiten.de
  * Author URI:        https://landeseiten.de
  * License:           GPLv2 or later
@@ -26,7 +26,7 @@ if ( ! defined( 'WPINC' ) ) {
  */
 define( 'LF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'LF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'LF_VERSION', '2.4.0' );
+define( 'LF_VERSION', '2.5.0' );
 
 /**
  * Load core plugin files.
@@ -57,6 +57,20 @@ function lf_error_message_defaults() {
 }
 
 /**
+ * Earlier default validation messages, still found verbatim in older configs.
+ *
+ * @since 2.5.0
+ * @return array<string,string[]> meta_key => old defaults
+ */
+function lf_error_message_legacy_defaults() {
+	return [
+		'_lf_error_required' => [ 'Dieses Feld ist erforderlich.' ],
+		'_lf_error_email'    => [ 'Bitte geben Sie eine gültige E-Mail-Adresse ein.' ],
+		'_lf_error_phone'    => [ 'Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.' ],
+	];
+}
+
+/**
  * Returns the saved error message for a config post, or '' when the site
  * still uses a default.
  *
@@ -73,11 +87,7 @@ function lf_get_custom_error_message( $post_id, $meta_key ) {
 		return '';
 	}
 
-	$legacy = [
-		'_lf_error_required' => [ 'Dieses Feld ist erforderlich.' ],
-		'_lf_error_email'    => [ 'Bitte geben Sie eine gültige E-Mail-Adresse ein.' ],
-		'_lf_error_phone'    => [ 'Bitte geben Sie eine gültige Telefonnummer (nur Ziffern) ein.' ],
-	];
+	$legacy   = lf_error_message_legacy_defaults();
 	$defaults = lf_error_message_defaults();
 	$known    = isset( $legacy[ $meta_key ] ) ? $legacy[ $meta_key ] : [];
 	if ( isset( $defaults[ $meta_key ] ) ) {
@@ -88,6 +98,7 @@ function lf_get_custom_error_message( $post_id, $meta_key ) {
 }
 
 require_once LF_PLUGIN_DIR . 'includes/enqueue-scripts.php';
+require_once LF_PLUGIN_DIR . 'includes/i18n.php';
 require_once LF_PLUGIN_DIR . 'includes/post-type.php';
 require_once LF_PLUGIN_DIR . 'includes/meta-boxes.php';
 require_once LF_PLUGIN_DIR . 'includes/gravity-forms-hooks.php';

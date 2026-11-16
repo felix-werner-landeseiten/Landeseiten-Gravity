@@ -31,6 +31,7 @@ if ( ! empty( $lf_posts ) ) {
 		delete_post_meta( $post_id, '_lf_mode' );
 		delete_post_meta( $post_id, '_lf_container_max_width' );
 		delete_post_meta( $post_id, '_lf_enable_shadow' );
+		delete_post_meta( $post_id, '_lf_calendar_lang' );
 		delete_post_meta( $post_id, '_lf_accent_color' );
 		delete_post_meta( $post_id, '_lf_text_color' );
 		delete_post_meta( $post_id, '_lf_active_text_color' );
@@ -69,3 +70,6 @@ if ( ! empty( $lf_posts ) ) {
 		wp_delete_post( $post_id, true );
 	}
 }
+
+// Bookkeeping for WPML / Polylang string registration (since 2.5.0).
+delete_option( 'lf_registered_strings' );

@@ -53,7 +53,16 @@ The plugin automatically ignores "Hidden" fields. To skip a visible field (e.g.,
 = Can I customize the "Submit" button text? =
 Yes! In version 2.0.0, go to the "Content & Text" tab in your Landeseiten Form configuration and enter your custom text (e.g., "Get Quote Now") in the Submit Button field.
 
+= How do I translate the button texts and error messages (WPML / Polylang)? =
+Keep one Landeseiten Form config per Gravity Form — no second form or config per language is needed (Gravity Forms Multilingual keeps the same form ID in every language). The plugin registers the Next/Previous/Submit texts and the error messages as strings: WPML → String Translation, domain "Landeseiten Form" (Polylang: Languages → Translations, group "Landeseiten Form"), one entry per text, e.g. "Form 1: Next button". Strings are registered on the next visit to any admin page after updating or saving a config. Texts still at their default show in English on non-German pages until you translate them; custom texts need a translation. Set "Calendar Language" to "Automatic (page language)" so the date picker follows the page language too.
+
 == Changelog ==
+
+= 2.5.0 =
+* **NEW:** WPML / Polylang support for the button texts and error messages. They are registered as translatable strings (WPML → String Translation, domain "Landeseiten Form") and shown in the page language, so one config serves every language — no duplicate forms. Default texts show in English on non-German pages until translated.
+* **NEW:** Calendar Language "Automatic (page language)" (default for new configs). Bundled calendar languages: German, French, Italian, Spanish, Dutch, Polish; others show English.
+* **NEW:** wpml-config.xml keeps the config post type shared across languages, so WPML cannot hide configs on translated pages.
+* **FIX:** With block themes the per-form settings (texts, mode, calendar language, progress bar) were dropped, because the form rendered before the plugin's scripts were registered.
 
 = 2.4.0 =
 * **NEW:** Fields placed in the same Gravity Forms row now appear together as one step, side by side (stacked on phones). "Weiter" unlocks once every field in the row is valid; Enter or picking a choice moves to the row's next empty field, and advances when the row is complete. Rows whose other fields are hidden by conditional logic stretch to full width.

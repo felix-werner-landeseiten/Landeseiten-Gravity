@@ -61,6 +61,46 @@ function lf_register_assets() {
 add_action( 'wp_enqueue_scripts', 'lf_register_assets', 5 );
 
 /**
+ * Turns the saved calendar language into a Flatpickr locale code.
+ *
+ * "auto" uses the page locale, which WPML / Polylang switch per language
+ * (de_DE → "de", en_US → "en").
+ *
+ * @since 2.5.0
+ * @param string $saved Saved setting: "auto", "en", "de" or '' (legacy: English).
+ * @return string Two-letter code, e.g. "de".
+ */
+function lf_resolve_calendar_lang( $saved ) {
+    if ( 'auto' !== $saved ) {
+        return (string) $saved;
+    }
+    return strtolower( substr( (string) get_locale(), 0, 2 ) );
+}
+
+/**
+ * Enqueues the bundled Flatpickr locale for $lang.
+ *
+ * @since 2.5.0
+ * @param string $lang Two-letter code.
+ * @return bool False when no locale file is bundled (Flatpickr stays English).
+ */
+function lf_enqueue_calendar_locale( $lang ) {
+    $lang   = sanitize_key( $lang );
+    $handle = 'flatpickr-l10n-' . $lang;
+
+    if ( ! wp_script_is( $handle, 'registered' ) ) {
+        $file = 'vendor/flatpickr/js/l10n-' . $lang . '.js';
+        if ( '' === $lang || ! file_exists( LF_PLUGIN_DIR . $file ) ) {
+            return false;
+        }
+        wp_register_script( $handle, LF_PLUGIN_URL . $file, [ 'flatpickr-js' ], '4.6.13', true );
+    }
+
+    wp_enqueue_script( $handle );
+    return true;
+}
+
+/**
  * Enqueue the previously registered assets.
  *
  * Called from gravity-forms-hooks.php when a configured form is detected
@@ -73,6 +113,13 @@ function lf_enqueue_registered_assets() {
 
     if ( $enqueued ) {
         return;
+    }
+
+    // Block themes render the content (and so gform_pre_render) before
+    // wp_enqueue_scripts. Register now, or wp_localize_script() drops the
+    // per-form settings because the handle does not exist yet.
+    if ( ! wp_script_is( 'landeseiten-form-init-script', 'registered' ) ) {
+        lf_register_assets();
     }
 
     wp_enqueue_style( 'flatpickr-css' );
